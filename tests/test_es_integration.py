@@ -115,3 +115,55 @@ async def test_es_aggregate_unique_dst_ports_detects_scan(es_client: AsyncElasti
     top = result.top_offenders[0]
     assert top.src_ip == "10.0.0.99"
     assert top.value >= 70
+
+
+@pytest.mark.asyncio
+async def test_es_aggregate_failed_conn_ratio_distinguishes_scan_from_normal_traffic(
+    es_client: AsyncElasticsearch,
+):
+    index = TEST_INDEX
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    # 스캐너: 포트마다 응답이 없거나(0) RST 하나만(1) 돌아옴
+    for port in range(50):
+        await es_client.index(
+            index=index,
+            document={
+                "@timestamp": now.isoformat(),
+                "src_ip": "10.0.0.66",
+                "dest_ip": "10.0.0.1",
+                "dest_port": 3000 + port,
+                "proto": "TCP",
+                "event_type": "flow",
+                "flow": {"pkts_toserver": 1, "pkts_toclient": port % 2},
+            },
+        )
+
+    # 정상 트래픽: 매번 핸드셰이크 완료 + 데이터 응답까지 옴
+    for i in range(20):
+        await es_client.index(
+            index=index,
+            document={
+                "@timestamp": now.isoformat(),
+                "src_ip": "10.0.0.5",
+                "dest_ip": "10.0.0.1",
+                "dest_port": 80,
+                "proto": "TCP",
+                "event_type": "flow",
+                "flow": {"pkts_toserver": 5, "pkts_toclient": 5},
+            },
+        )
+    await es_client.indices.refresh(index=index)
+
+    result = await es_aggregate(
+        es_client,
+        "failed_conn_ratio_per_src",
+        start=(now - datetime.timedelta(minutes=1)).isoformat(),
+        end=(now + datetime.timedelta(minutes=1)).isoformat(),
+        window_seconds=60,
+        compare_baseline=False,
+    )
+
+    by_src = {o.src_ip: o.value for o in result.top_offenders}
+    assert by_src["10.0.0.66"] == 1.0
+    assert by_src["10.0.0.5"] == 0.0

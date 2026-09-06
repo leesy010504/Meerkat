@@ -15,6 +15,7 @@ MetricName = Literal[
     "http_4xx_ratio_per_src",
     "conn_count_per_src_port",
     "request_rate_per_src",
+    "failed_conn_ratio_per_src",
 ]
 
 _METRIC_INDEX: dict[str, str] = {
@@ -23,6 +24,7 @@ _METRIC_INDEX: dict[str, str] = {
     "http_4xx_ratio_per_src": "nginx-access-*",
     "conn_count_per_src_port": "suricata-flow-*",
     "request_rate_per_src": "nginx-access-*",
+    "failed_conn_ratio_per_src": "suricata-flow-*",
 }
 
 _METRIC_CARDINALITY_FIELD: dict[str, str | None] = {
@@ -31,6 +33,16 @@ _METRIC_CARDINALITY_FIELD: dict[str, str | None] = {
     "http_4xx_ratio_per_src": None,
     "conn_count_per_src_port": None,
     "request_rate_per_src": None,
+    "failed_conn_ratio_per_src": None,
+}
+
+# 비율(ratio) 계열 지표: (분모 필드, "매치"로 셀 값의 range 조건).
+# failed_conn_ratio_per_src: 서버가 응답 패킷을 1개 이하로 보낸 플로우(무응답 또는
+# RST 하나뿐)를 "실패한 연결 시도"로 본다 — 포트 스캔은 대부분 이 모양이고,
+# 정상 요청-응답은 pkts_toclient가 최소 SYN-ACK+데이터로 2개 이상 나온다.
+_METRIC_RATIO_CONFIG: dict[str, tuple[str, dict]] = {
+    "http_4xx_ratio_per_src": ("nginx.status", {"gte": 400, "lt": 500}),
+    "failed_conn_ratio_per_src": ("flow.pkts_toclient", {"lte": 1}),
 }
 
 
@@ -85,10 +97,11 @@ async def _compute_offenders(
     query = {"range": {"@timestamp": {"gte": start, "lte": end}}}
 
     by_src: dict = {"terms": {"field": "src_ip", "size": top_n, "order": {"_count": "desc"}}}
-    if metric == "http_4xx_ratio_per_src":
+    if metric in _METRIC_RATIO_CONFIG:
+        ratio_field, ratio_range = _METRIC_RATIO_CONFIG[metric]
         by_src["aggs"] = {
-            "total": {"value_count": {"field": "nginx.status"}},
-            "errors": {"filter": {"range": {"nginx.status": {"gte": 400, "lt": 500}}}},
+            "total": {"value_count": {"field": ratio_field}},
+            "matched": {"filter": {"range": {ratio_field: ratio_range}}},
         }
     elif field is not None:
         by_src["aggs"] = {"cardinality_value": {"cardinality": {"field": field}}}
@@ -99,9 +112,9 @@ async def _compute_offenders(
 
     offenders: list[Offender] = []
     for bucket in buckets:
-        if metric == "http_4xx_ratio_per_src":
+        if metric in _METRIC_RATIO_CONFIG:
             total = bucket["total"]["value"] or 1
-            value = bucket["errors"]["doc_count"] / total
+            value = bucket["matched"]["doc_count"] / total
         elif field is not None:
             value = bucket["cardinality_value"]["value"]
         else:
@@ -123,10 +136,11 @@ async def _compute_baseline_distribution(
     query = {"range": {"@timestamp": {"gte": start.isoformat(), "lte": end.isoformat()}}}
 
     by_src: dict = {"terms": {"field": "src_ip", "size": 1000}}
-    if metric == "http_4xx_ratio_per_src":
+    if metric in _METRIC_RATIO_CONFIG:
+        ratio_field, ratio_range = _METRIC_RATIO_CONFIG[metric]
         by_src["aggs"] = {
-            "total": {"value_count": {"field": "nginx.status"}},
-            "errors": {"filter": {"range": {"nginx.status": {"gte": 400, "lt": 500}}}},
+            "total": {"value_count": {"field": ratio_field}},
+            "matched": {"filter": {"range": {ratio_field: ratio_range}}},
         }
     elif field is not None:
         by_src["aggs"] = {"cardinality_value": {"cardinality": {"field": field}}}
@@ -143,9 +157,9 @@ async def _compute_baseline_distribution(
     values: list[float] = []
     for time_bucket in response["aggregations"]["over_time"]["buckets"]:
         for src_bucket in time_bucket["by_src"]["buckets"]:
-            if metric == "http_4xx_ratio_per_src":
+            if metric in _METRIC_RATIO_CONFIG:
                 total = src_bucket["total"]["value"] or 1
-                values.append(src_bucket["errors"]["doc_count"] / total)
+                values.append(src_bucket["matched"]["doc_count"] / total)
             elif field is not None:
                 values.append(src_bucket["cardinality_value"]["value"])
             else:

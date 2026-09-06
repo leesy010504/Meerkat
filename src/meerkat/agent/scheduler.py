@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 METRIC_CONFIG: dict[str, tuple[str, str]] = {
     "unique_dst_ports_per_src": ("suricata-flow", "scanning"),
     "conn_count_per_src_port": ("suricata-flow", "scanning"),
+    "failed_conn_ratio_per_src": ("suricata-flow", "scanning"),
     "unique_endpoints_per_src": ("nginx-access", "web-attack"),
     "http_4xx_ratio_per_src": ("nginx-access", "web-attack"),
     "request_rate_per_src": ("nginx-access", "web-attack"),
