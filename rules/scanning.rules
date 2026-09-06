@@ -1,0 +1,1 @@
+alert tcp any any -> any any (msg:"LOCAL Port Scan - Multiple Ports from Single Source"; flow:to_server; threshold:type threshold, track by_src, count 70, seconds 60; classtype:attempted-recon; sid:1000001; rev:1;)
