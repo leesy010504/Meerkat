@@ -1,0 +1,26 @@
+elasticsearch:
+  hosts:
+    - "http://localhost:9200"
+  read_only_user: "meerkat_reader"
+
+llm:
+  provider: "gemini"
+  model_relation_assess: "gemini-3.6-pro"
+  model_rule_generate: "gemini-3.6-flash"
+  model_rule_repair: "gemini-3.6-flash"
+  model_sample_select: "gemini-3.6-flash"
+  temperature: 0.0
+
+retry:
+  max_repair_attempts: 3
+
+suricata:
+  binary: "suricata"
+  container_image: null
+  rule_sid_range: [1000000, 1999999]
+
+paths:
+  pcaps_attack: "pcaps/attack"
+  pcaps_benign: "pcaps/benign"
+  rules_dir: "rules"
+  pcap_log_dir: null  # Suricata pcap-log 회전 파일 디렉토리

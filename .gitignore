@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+.venv_check/
+.meerkat/
+*.egg-info/
+.env
+docs/
+CLAUDE-career-notes.md
+
