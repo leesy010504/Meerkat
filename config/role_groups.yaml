@@ -1,0 +1,13 @@
+groups:
+  scanning:
+    protocols: [tcp, udp, icmp]
+    direction: inbound
+    # threshold/detection_filter는 rate-based 룰에만 특징적으로 나타난다
+    expected_keywords: [threshold, detection_filter]
+    classtypes: [attempted-recon, network-scan]
+
+  web-attack:
+    protocols: [http]
+    direction: inbound
+    target_services: [ingress-nginx]
+    classtypes: [web-application-attack, attempted-admin]
