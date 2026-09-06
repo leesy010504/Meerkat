@@ -16,6 +16,7 @@ MetricName = Literal[
     "conn_count_per_src_port",
     "request_rate_per_src",
     "failed_conn_ratio_per_src",
+    "dns_query_rate_per_src",
 ]
 
 _METRIC_INDEX: dict[str, str] = {
@@ -25,6 +26,7 @@ _METRIC_INDEX: dict[str, str] = {
     "conn_count_per_src_port": "suricata-flow-*",
     "request_rate_per_src": "nginx-access-*",
     "failed_conn_ratio_per_src": "suricata-flow-*",
+    "dns_query_rate_per_src": "suricata-dns-*",
 }
 
 _METRIC_CARDINALITY_FIELD: dict[str, str | None] = {
@@ -34,6 +36,7 @@ _METRIC_CARDINALITY_FIELD: dict[str, str | None] = {
     "conn_count_per_src_port": None,
     "request_rate_per_src": None,
     "failed_conn_ratio_per_src": None,
+    "dns_query_rate_per_src": None,
 }
 
 # 비율(ratio) 계열 지표: (분모 필드, "매치"로 셀 값의 range 조건).
@@ -43,6 +46,11 @@ _METRIC_CARDINALITY_FIELD: dict[str, str | None] = {
 _METRIC_RATIO_CONFIG: dict[str, tuple[str, dict]] = {
     "http_4xx_ratio_per_src": ("nginx.status", {"gte": 400, "lt": 500}),
     "failed_conn_ratio_per_src": ("flow.pkts_toclient", {"lte": 1}),
+}
+
+# UDP는 핸드셰이크가 없어서 응답 패킷 1개가 정상 완료 상태다 — TCP에만 적용한다.
+_METRIC_EXTRA_FILTER: dict[str, dict] = {
+    "failed_conn_ratio_per_src": {"term": {"proto": "TCP"}},
 }
 
 
@@ -94,7 +102,7 @@ async def _compute_offenders(
 ) -> list[Offender]:
     index = _METRIC_INDEX[metric]
     field = _METRIC_CARDINALITY_FIELD[metric]
-    query = {"range": {"@timestamp": {"gte": start, "lte": end}}}
+    query = _build_query(metric, start, end)
 
     by_src: dict = {"terms": {"field": "src_ip", "size": top_n, "order": {"_count": "desc"}}}
     if metric in _METRIC_RATIO_CONFIG:
@@ -124,6 +132,14 @@ async def _compute_offenders(
     return offenders
 
 
+def _build_query(metric: str, start: str, end: str) -> dict:
+    must: list[dict] = [{"range": {"@timestamp": {"gte": start, "lte": end}}}]
+    extra_filter = _METRIC_EXTRA_FILTER.get(metric)
+    if extra_filter is not None:
+        must.append(extra_filter)
+    return {"bool": {"must": must}}
+
+
 async def _compute_baseline_distribution(
     client: AsyncElasticsearch, metric: str, window_seconds: int, baseline_days: int = 14
 ) -> list[float]:
@@ -133,7 +149,7 @@ async def _compute_baseline_distribution(
 
     end = datetime.now(timezone.utc)
     start = end - timedelta(days=baseline_days)
-    query = {"range": {"@timestamp": {"gte": start.isoformat(), "lte": end.isoformat()}}}
+    query = _build_query(metric, start.isoformat(), end.isoformat())
 
     by_src: dict = {"terms": {"field": "src_ip", "size": 1000}}
     if metric in _METRIC_RATIO_CONFIG:

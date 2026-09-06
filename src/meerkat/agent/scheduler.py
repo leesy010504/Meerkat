@@ -27,6 +27,7 @@ METRIC_CONFIG: dict[str, tuple[str, str]] = {
     "unique_endpoints_per_src": ("nginx-access", "web-attack"),
     "http_4xx_ratio_per_src": ("nginx-access", "web-attack"),
     "request_rate_per_src": ("nginx-access", "web-attack"),
+    "dns_query_rate_per_src": ("suricata-dns", "dns-flood"),
 }
 
 

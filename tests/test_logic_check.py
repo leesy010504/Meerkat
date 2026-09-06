@@ -35,6 +35,13 @@ WRONG_DIRECTION_RULE = (
     "classtype:attempted-recon; sid:1000004; rev:1;)"
 )
 
+DNS_FLOOD_RULE = (
+    'alert udp $EXTERNAL_NET any -> $HOME_NET 53 '
+    '(msg:"dns query flood"; '
+    "threshold:type threshold, track by_src, count 500, seconds 60; "
+    "classtype:denial-of-service; sid:1000005; rev:1;)"
+)
+
 
 @pytest.fixture(scope="module")
 def role_groups():
@@ -82,3 +89,8 @@ def test_propose_role_groups_ranks_scanning_first(role_groups):
 def test_propose_role_groups_ranks_web_attack_first(role_groups):
     candidates = propose_role_groups(WEB_ATTACK_RULE, role_groups)
     assert candidates and candidates[0] == "web-attack"
+
+
+def test_dns_flood_rule_matches_dns_flood_group(role_groups):
+    result = check_rule_logic(DNS_FLOOD_RULE, "dns-flood", role_groups)
+    assert result.ok, result.reasons

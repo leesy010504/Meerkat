@@ -11,3 +11,9 @@ groups:
     direction: inbound
     target_services: [ingress-nginx]
     classtypes: [web-application-attack, attempted-admin]
+
+  dns-flood:
+    protocols: [udp]
+    direction: inbound
+    expected_keywords: [threshold, detection_filter]
+    classtypes: [denial-of-service]

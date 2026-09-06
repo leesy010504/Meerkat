@@ -13,6 +13,7 @@ from meerkat.mcp_server.tools.es_query import es_query_events
 
 ES_URL = "http://localhost:9200"
 TEST_INDEX = "suricata-flow-000001"
+DNS_TEST_INDEX = "suricata-dns-000001"
 
 
 async def _es_available() -> bool:
@@ -167,3 +168,41 @@ async def test_es_aggregate_failed_conn_ratio_distinguishes_scan_from_normal_tra
     by_src = {o.src_ip: o.value for o in result.top_offenders}
     assert by_src["10.0.0.66"] == 1.0
     assert by_src["10.0.0.5"] == 0.0
+
+
+@pytest.mark.asyncio
+async def test_es_aggregate_dns_query_rate_detects_flood(es_client: AsyncElasticsearch):
+    index = DNS_TEST_INDEX
+    await es_client.indices.delete(index=index, ignore_unavailable=True)
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    # 한 출발지가 짧은 시간에 DNS 쿼리를 몰아넣음
+    for i in range(300):
+        await es_client.index(
+            index=index,
+            document={
+                "@timestamp": now.isoformat(),
+                "src_ip": "10.0.0.77",
+                "dest_ip": "10.0.0.1",
+                "proto": "UDP",
+                "event_type": "dns",
+                "dns": {"rrname": f"flood{i}.example.com", "rrtype": "A"},
+            },
+        )
+    await es_client.indices.refresh(index=index)
+
+    result = await es_aggregate(
+        es_client,
+        "dns_query_rate_per_src",
+        start=(now - datetime.timedelta(minutes=1)).isoformat(),
+        end=(now + datetime.timedelta(minutes=1)).isoformat(),
+        window_seconds=60,
+        compare_baseline=False,
+    )
+
+    assert result.top_offenders, "no offenders returned"
+    top = result.top_offenders[0]
+    assert top.src_ip == "10.0.0.77"
+    assert top.value >= 300
+
+    await es_client.indices.delete(index=index, ignore_unavailable=True)
