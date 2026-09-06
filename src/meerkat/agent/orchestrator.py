@@ -8,10 +8,12 @@ from meerkat.agent.rule_repair import FailureType, repair_rule
 from meerkat.agent.rule_select import select_best_candidate
 from meerkat.agent.schemas import RelationAssessOutput
 from meerkat.llm.client import LLMClient
+from meerkat.mcp_server.tools.deploy import assign_role_group
 from meerkat.mcp_server.tools.rule_ops import allocate_sid
 from meerkat.security.injection_filter import filter_flow_fields
 from meerkat.storage.rule_memory import RuleItem, RuleMemory
 from meerkat.validation.deterministic_fix import apply_deterministic_fixes
+from meerkat.validation.logic_check import load_role_groups
 from meerkat.validation.replay import replay_rule
 from meerkat.validation.syntax import check_rule_syntax
 
@@ -58,9 +60,11 @@ async def orchestrate(
     verify_ctx: VerifyContext,
     suggested_threshold: dict | None = None,
     sid_range: tuple[int, int] = (1000000, 1999999),
+    role_groups_path: str = "config/role_groups.yaml",
 ) -> RuleItem:
     # 진입점에서 한 번만 인젝션 필터를 적용한다
     flow_summary = filter_flow_fields(flow_summary)
+    role_groups = load_role_groups(role_groups_path)
 
     # 현재 룰셋으로 이미 탐지되는지 먼저 확인한다
     if repr_pcap_path is not None:
@@ -108,8 +112,14 @@ async def orchestrate(
                 verify_ctx, models, sid_range,
             )
             if success:
+                try:
+                    validated_role_group = assign_role_group(
+                        final_rule_text, role_group_hint, role_groups
+                    )
+                except ValueError as exc:
+                    raise OrchestratorFailure(f"역할 그룹 결정 실패: {exc}") from exc
                 return await record_generated_rule(
-                    rule_memory, sid, final_rule_text, role_group_hint,
+                    rule_memory, sid, final_rule_text, validated_role_group,
                     repr_event_ids, repr_pcap_path,
                 )
 

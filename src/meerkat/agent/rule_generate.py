@@ -17,6 +17,9 @@ SYSTEM_PROMPT = """너는 새로 발견된 공격 트래픽에서 Suricata 탐�
 프로토콜 신호마다 룰을 따로 만들지 않는다.
 - 액션은 항상 alert. drop/reject는 절대 쓰지 않는다.
 - sid는 반드시 available_sids 중 하나만 써라. 다른 값을 지어내지 마라.
+- 외부에서 내부로 들어오는 공격이면 헤더에 반드시 $EXTERNAL_NET(출발지)과 \
+$HOME_NET(목적지)을 써라. "any any -> any any"처럼 리터럴 any로 방향을 \
+뭉개지 마라 — 역할 그룹 매핑이 이 방향 정보로 룰을 검증한다.
 
 suggested_threshold가 주어지면 threshold/detection_filter 절의 count와 seconds는 \
 그 값을 그대로 써라. 절대 임의로 지어내지 마라 (baseline에서 도출된 값이어야 한다).

@@ -78,6 +78,39 @@ async def test_new_pattern_generates_and_deploys(monkeypatch, tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_wrong_role_group_hint_is_corrected_by_rule_content(monkeypatch, tmp_path):
+    """스케줄러가 잘못된 role_group_hint를 줘도, 실제 룰 내용(classtype/protocol)을
+    기준으로 올바른 그룹으로 교정돼야 한다."""
+    _always_pass_verify(monkeypatch)
+
+    web_attack_rule = (
+        'alert tcp $EXTERNAL_NET any -> $HOME_NET 80 '
+        '(msg:"sqli"; http.uri; content:"union select"; nocase; '
+        "classtype:web-application-attack; sid:1000001; rev:1;)"
+    )
+
+    llm = FakeLLMClient()
+    llm.queue(RelationAssessOutput(is_variant=False, matched_sid=None, reasoning="새 유형"))
+    llm.queue(RuleGenerateOutput(candidates=[web_attack_rule], attack_summary="sqli"))
+
+    memory = RuleMemory(path=tmp_path / "rule_memory.json")
+    verify_ctx = VerifyContext(attack_pcaps=[], benign_pcaps=[])
+
+    result = await orchestrate(
+        flow_summary={"src_ip": "1.2.3.4"},
+        repr_event_ids=["e1"],
+        repr_pcap_path=None,
+        role_group_hint="scanning",  # 일부러 틀린 힌트
+        llm_client=llm,
+        rule_memory=memory,
+        models=MODELS,
+        verify_ctx=verify_ctx,
+    )
+
+    assert result.role_group == "web-attack"
+
+
+@pytest.mark.asyncio
 async def test_variant_repairs_existing_rule(monkeypatch, tmp_path):
     _always_pass_verify(monkeypatch)
 
@@ -120,9 +153,14 @@ async def test_repair_retries_up_to_k_then_deploys(monkeypatch, tmp_path):
     llm = FakeLLMClient()
     llm.queue(RelationAssessOutput(is_variant=False, matched_sid=None, reasoning="새 유형"))
     llm.queue(RuleGenerateOutput(candidates=["bad rule v1"], attack_summary="x"))
+    good_rule = (
+        'alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:"test"; '
+        "threshold:type threshold, track by_src, count 1, seconds 1; "
+        "classtype:attempted-recon; sid:1000001; rev:1;)"
+    )
     llm.queue(
         RuleRepairOutput(repaired_rule_text="bad rule v2"),
-        RuleRepairOutput(repaired_rule_text="good rule v3"),
+        RuleRepairOutput(repaired_rule_text=good_rule),
     )
 
     memory = RuleMemory(path=tmp_path / "rule_memory.json")
@@ -139,7 +177,7 @@ async def test_repair_retries_up_to_k_then_deploys(monkeypatch, tmp_path):
         verify_ctx=verify_ctx,
     )
 
-    assert result.rule_text == "good rule v3"
+    assert result.rule_text == good_rule
 
 
 @pytest.mark.asyncio
@@ -177,9 +215,20 @@ async def test_always_failing_verification_eventually_raises(monkeypatch, tmp_pa
 async def test_multiple_passing_candidates_calls_rule_select(monkeypatch, tmp_path):
     _always_pass_verify(monkeypatch)
 
+    candidate_a = (
+        'alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:"candidate A"; '
+        "threshold:type threshold, track by_src, count 1, seconds 1; "
+        "classtype:attempted-recon; sid:1000001; rev:1;)"
+    )
+    candidate_b = (
+        'alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:"candidate B"; '
+        "threshold:type threshold, track by_src, count 1, seconds 1; "
+        "classtype:attempted-recon; sid:1000001; rev:1;)"
+    )
+
     llm = FakeLLMClient()
     llm.queue(RelationAssessOutput(is_variant=False, matched_sid=None, reasoning="새 유형"))
-    llm.queue(RuleGenerateOutput(candidates=["candidate A", "candidate B"], attack_summary="x"))
+    llm.queue(RuleGenerateOutput(candidates=[candidate_a, candidate_b], attack_summary="x"))
     llm.queue(RuleSelectOutput(selected_index=1, reason="B가 더 구체적"))
 
     memory = RuleMemory(path=tmp_path / "rule_memory.json")
@@ -196,7 +245,7 @@ async def test_multiple_passing_candidates_calls_rule_select(monkeypatch, tmp_pa
         verify_ctx=verify_ctx,
     )
 
-    assert result.rule_text == "candidate B"
+    assert result.rule_text == candidate_b
     assert RuleSelectOutput in llm.calls
 
 
