@@ -5,7 +5,7 @@ elasticsearch:
 
 llm:
   provider: "gemini"
-  model_relation_assess: "gemini-3.6-pro"
+  model_relation_assess: "gemini-3.6-flash"  # 무료 티어는 pro 등급 할당량이 0이라 flash만 쓸 수 있음
   model_rule_generate: "gemini-3.6-flash"
   model_rule_repair: "gemini-3.6-flash"
   model_sample_select: "gemini-3.6-flash"
