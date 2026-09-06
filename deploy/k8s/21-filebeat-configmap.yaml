@@ -1,0 +1,31 @@
+# eve.json 필드명을 그대로 색인한다 (Filebeat Suricata 모듈 미사용)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebeat-config
+  namespace: meerkat
+data:
+  filebeat.yml: |
+    filebeat.inputs:
+      - type: log
+        paths:
+          - /var/log/suricata/eve.json
+        json.keys_under_root: true
+        json.add_error_key: true
+        json.overwrite_keys: true
+
+    processors:
+      - drop_event:
+          when:
+            not:
+              has_fields: ["event_type"]
+
+    output.elasticsearch:
+      hosts: ["elasticsearch.meerkat.svc.cluster.local:9200"]
+      index: "suricata-%{[event_type]}-%{+yyyy.MM.dd}"
+
+    setup.template.enabled: false
+    setup.ilm.enabled: false
+
+    logging.level: info
+    logging.to_stderr: true

@@ -1,0 +1,67 @@
+# hostNetwork + AF_PACKET으로 enp3s0을 캡처하고 -S로 지정한 룰만 로드한다
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: suricata
+  namespace: meerkat
+spec:
+  selector:
+    matchLabels:
+      app: suricata
+  template:
+    metadata:
+      labels:
+        app: suricata
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: suricata
+          image: jasonish/suricata:8.0.6
+          args: ["-S", "/etc/suricata/rules/local.rules", "-i", "enp3s0"]
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN", "NET_RAW", "SYS_NICE"]
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "768Mi"
+          volumeMounts:
+            - name: suricata-rules
+              mountPath: /etc/suricata/rules
+              readOnly: true
+            - name: eve-log
+              mountPath: /var/log/suricata
+        - name: filebeat
+          image: docker.elastic.co/beats/filebeat:8.15.0
+          args: ["-e", "--strict.perms=false"]
+          volumeMounts:
+            - name: filebeat-config
+              mountPath: /usr/share/filebeat/filebeat.yml
+              subPath: filebeat.yml
+            - name: eve-log
+              mountPath: /var/log/suricata
+              readOnly: true
+            - name: filebeat-data
+              mountPath: /usr/share/filebeat/data
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "100Mi"
+            limits:
+              cpu: "200m"
+              memory: "200Mi"
+      volumes:
+        - name: suricata-rules
+          configMap:
+            name: suricata-rules
+        - name: filebeat-config
+          configMap:
+            name: filebeat-config
+        - name: eve-log
+          emptyDir: {}
+        - name: filebeat-data
+          emptyDir: {}
