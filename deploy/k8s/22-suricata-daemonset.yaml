@@ -18,7 +18,7 @@ spec:
       containers:
         - name: suricata
           image: jasonish/suricata:8.0.6
-          args: ["-S", "/etc/suricata/rules/local.rules", "-i", "enp3s0"]
+          args: ["-S", "/rules/local.rules", "-i", "enp3s0"]
           securityContext:
             capabilities:
               add: ["NET_ADMIN", "NET_RAW", "SYS_NICE"]
@@ -31,7 +31,7 @@ spec:
               memory: "768Mi"
           volumeMounts:
             - name: suricata-rules
-              mountPath: /etc/suricata/rules
+              mountPath: /rules
               readOnly: true
             - name: eve-log
               mountPath: /var/log/suricata
