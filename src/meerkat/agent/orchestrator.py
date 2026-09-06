@@ -13,7 +13,7 @@ from meerkat.mcp_server.tools.rule_ops import allocate_sid
 from meerkat.security.injection_filter import filter_flow_fields
 from meerkat.storage.rule_memory import RuleItem, RuleMemory
 from meerkat.validation.deterministic_fix import apply_deterministic_fixes
-from meerkat.validation.logic_check import load_role_groups
+from meerkat.validation.logic_check import RoleGroupDef, load_role_groups
 from meerkat.validation.replay import replay_rule
 from meerkat.validation.syntax import check_rule_syntax
 
@@ -109,7 +109,7 @@ async def orchestrate(
         else:
             success, final_rule_text, sid, _ = await _generate_cycle(
                 llm_client, flow_summary, suggested_threshold, existing_rules,
-                verify_ctx, models, sid_range,
+                verify_ctx, models, sid_range, role_groups.get(role_group_hint),
             )
             if success:
                 try:
@@ -174,6 +174,7 @@ async def _generate_cycle(
     verify_ctx: VerifyContext,
     models: ModelConfig,
     sid_range: tuple[int, int],
+    target_role_group: RoleGroupDef | None = None,
 ) -> tuple[bool, str, int, int]:
     existing_sids = {r.sid for r in existing_rules}
     sid = allocate_sid(existing_sids, sid_range)
@@ -184,7 +185,8 @@ async def _generate_cycle(
     for attempt in range(K_MAX + 1):
         if not candidates:
             gen_output = await generate_rules(
-                llm_client, flow_summary, suggested_threshold, [sid], models.rule_generate
+                llm_client, flow_summary, suggested_threshold, [sid], models.rule_generate,
+                target_role_group,
             )
             candidates = gen_output.candidates
 

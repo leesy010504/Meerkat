@@ -1,5 +1,6 @@
 from meerkat.agent.schemas import RuleGenerateOutput
 from meerkat.llm.client import LLMClient
+from meerkat.validation.logic_check import RoleGroupDef
 
 SYSTEM_PROMPT = """너는 새로 발견된 공격 트래픽에서 Suricata 탐지 룰을 만드는 보안 \
 엔지니어다.
@@ -20,6 +21,10 @@ SYSTEM_PROMPT = """너는 새로 발견된 공격 트래픽에서 Suricata 탐�
 - 외부에서 내부로 들어오는 공격이면 헤더에 반드시 $EXTERNAL_NET(출발지)과 \
 $HOME_NET(목적지)을 써라. "any any -> any any"처럼 리터럴 any로 방향을 \
 뭉개지 마라 — 역할 그룹 매핑이 이 방향 정보로 룰을 검증한다.
+- target_role_group이 주어지면 그 안의 protocols/classtypes를 반드시 그대로 \
+써라. 예를 들어 protocols가 ["udp"]면 헤더 프로토콜은 udp여야 하고(예: "alert ip"처럼 \
+프로토콜을 뭉개지 마라), classtypes에 있는 값 중 하나를 classtype으로 써라. \
+target_role_group 없이는 지어내지 말고 flow_summary에서 실제로 보이는 프로토콜을 써라.
 
 suggested_threshold가 주어지면 threshold/detection_filter 절의 count와 seconds는 \
 그 값을 그대로 써라. 절대 임의로 지어내지 마라 (baseline에서 도출된 값이어야 한다).
@@ -34,11 +39,13 @@ async def generate_rules(
     suggested_threshold: dict | None,
     available_sids: list[int],
     model: str,
+    target_role_group: RoleGroupDef | None = None,
 ) -> RuleGenerateOutput:
     user_content = {
         "flow_summary": flow_summary,
         "suggested_threshold": suggested_threshold,
         "available_sids": available_sids,
+        "target_role_group": target_role_group.model_dump() if target_role_group else None,
     }
     return await llm_client.complete_structured(
         system_prompt=SYSTEM_PROMPT,
