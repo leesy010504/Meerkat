@@ -7,4 +7,6 @@ __pycache__/
 .env
 docs/
 CLAUDE-career-notes.md
+.omc/
+.idea/
 
