@@ -25,22 +25,25 @@ def load_role_groups(path: str | Path = "config/role_groups.yaml") -> dict[str, 
 
 
 def propose_role_groups(rule_text: str, role_groups: dict[str, RoleGroupDef]) -> list[str]:
-    """확정이 아니라 후보 제시용 — 최종 확정은 check_rule_logic이 규칙 기반으로 한다."""
-    scores: list[tuple[str, int]] = []
-    for name, group in role_groups.items():
-        result = check_rule_logic(rule_text, name, role_groups)
-        score = sum(
-            [
-                _protocol_matches(rule_text, group),
-                _classtype_matches(rule_text, group),
-                _has_expected_keyword(rule_text, group),
-            ]
-        )
-        if result.ok or score > 0:
-            scores.append((name, score))
+    """확정이 아니라 후보 제시용 — 최종 확정은 check_rule_logic이 규칙 기반으로 한다.
 
-    scores.sort(key=lambda item: item[1], reverse=True)
-    return [name for name, _ in scores]
+    protocol, classtype(정의돼 있으면), expected_keywords(정의돼 있으면) 전부 \
+    일치해야 후보 자격이 있다 — check_rule_logic의 필수조건과 동일하게 맞춘다. \
+    이 중 하나라도 가점 취급하면, 예를 들어 threshold/detection_filter처럼 여러 \
+    그룹에 공통으로 등장하는 키워드 하나만으로 protocol/classtype이 안 맞는 \
+    그룹에 잘못 배정될 수 있다.
+    """
+    candidates: list[str] = []
+    for name, group in role_groups.items():
+        if not _protocol_matches(rule_text, group):
+            continue
+        if group.classtypes and not _classtype_matches(rule_text, group):
+            continue
+        if group.expected_keywords and not _has_expected_keyword(rule_text, group):
+            continue
+        candidates.append(name)
+
+    return candidates
 
 
 def check_rule_logic(
@@ -93,8 +96,29 @@ def _classtype_matches(rule_text: str, group: RoleGroupDef) -> bool:
     return classtype is not None and classtype in group.classtypes
 
 
+_FULL_HEADER_RE = re.compile(
+    r"^\S+\s+\S+\s+\S+\s+\S+\s+(?:->|<>)\s+\S+\s+(?P<dst_port>\S+)\s*$"
+)
+
+
+def _extract_dest_port(rule_text: str) -> str | None:
+    header = rule_text.split("(")[0].strip()
+    match = _FULL_HEADER_RE.match(header)
+    return match.group("dst_port") if match else None
+
+
 def _has_expected_keyword(rule_text: str, group: RoleGroupDef) -> bool:
-    return any(keyword in rule_text for keyword in group.expected_keywords)
+    dest_port = _extract_dest_port(rule_text)
+    for keyword in group.expected_keywords:
+        if keyword.isdigit():
+            # 포트 번호는 헤더의 목적지 포트 필드와 정확히 일치할 때만 인정한다 —
+            # 룰 전체에서 부분 문자열로 찾으면 sid나 CVE 번호 등과 우연히 겹칠 수 있다
+            # (예: sid가 253이면 "53"이 문자열로는 포함돼 있음).
+            if dest_port == keyword:
+                return True
+        elif keyword in rule_text:
+            return True
+    return False
 
 
 _HEADER_RE = re.compile(

@@ -286,6 +286,47 @@ def fix_invalid_threshold_syntax(text: str) -> str:
     return _join_rule(header, new_options)
 
 
+def fix_empty_content(text: str) -> str:
+    """content:"" 처럼 빈 문자열 content는 Suricata가 문법 오류로 거부한다."""
+    header, options = _split_rule(text)
+    if header is None:
+        return text
+
+    new_options = [opt for opt in options if not re.match(r'^content:\s*""\s*$', opt.strip())]
+    if len(new_options) == len(options):
+        return text
+    return _join_rule(header, new_options)
+
+
+_STICKY_BUFFER_RE = re.compile(r"^[a-z_]+\.[a-z_]+$")
+
+
+def fix_orphaned_sticky_buffer(text: str) -> str:
+    """content/pcre 매치 없이 선언만 된 sticky buffer(예: "dns.query;" 단독)는
+    Suricata가 "setup buffer but didn't add matches to it" 에러를 낸다 — LLM이
+    "이 룰은 이 프로토콜/버퍼와 관련 있다"는 표시로 버퍼만 선언하고 실제 매치
+    조건을 안 붙이는 실수를 반복해서 만든다. 매치 없는 선언은 제거한다.
+    """
+    header, options = _split_rule(text)
+    if header is None:
+        return text
+
+    changed = False
+    new_options: list[str] = []
+    for i, opt in enumerate(options):
+        stripped = opt.strip()
+        if _STICKY_BUFFER_RE.match(stripped):
+            next_opt = options[i + 1].strip() if i + 1 < len(options) else ""
+            if not (next_opt.startswith("content:") or next_opt.startswith("pcre:")):
+                changed = True
+                continue
+        new_options.append(opt)
+
+    if not changed:
+        return text
+    return _join_rule(header, new_options)
+
+
 _PIPELINE: list[tuple[str, Callable[[str], str]]] = [
     ("legacy_http_modifier", fix_legacy_http_modifier),
     ("tshark_field_misuse", fix_tshark_field_names),
@@ -302,6 +343,8 @@ _PIPELINE: list[tuple[str, Callable[[str], str]]] = [
     ("tls_cert_field_with_client_direction", fix_tls_cert_field_with_client_direction),
     ("smb_ascii_match", fix_smb_ascii_match),
     ("invalid_threshold_syntax", fix_invalid_threshold_syntax),
+    ("empty_content", fix_empty_content),
+    ("orphaned_sticky_buffer", fix_orphaned_sticky_buffer),
 ]
 
 

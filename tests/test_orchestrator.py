@@ -57,7 +57,7 @@ async def test_new_pattern_generates_and_deploys(monkeypatch, tmp_path):
 
     llm = FakeLLMClient()
     llm.queue(RelationAssessOutput(is_variant=False, matched_sid=None, reasoning="새 유형"))
-    llm.queue(RuleGenerateOutput(candidates=["alert tcp any any -> any any (sid:1000001; rev:1;)"], attack_summary="포트 스캔"))
+    llm.queue(RuleGenerateOutput(candidates=["alert tcp any any -> any any (threshold:type threshold, track by_src, count 1, seconds 1; classtype:attempted-recon; sid:1000001; rev:1;)"], attack_summary="포트 스캔"))
 
     memory = RuleMemory(path=tmp_path / "rule_memory.json")
     verify_ctx = VerifyContext(attack_pcaps=[], benign_pcaps=[])
@@ -267,7 +267,7 @@ async def test_orchestrate_actually_filters_injected_field_before_llm_sees_it(mo
 
     llm = CapturingFakeLLMClient()
     llm.queue(RelationAssessOutput(is_variant=False, matched_sid=None, reasoning="새 유형"))
-    llm.queue(RuleGenerateOutput(candidates=["alert tcp any any -> any any (sid:1000001; rev:1;)"], attack_summary="x"))
+    llm.queue(RuleGenerateOutput(candidates=["alert tcp any any -> any any (threshold:type threshold, track by_src, count 1, seconds 1; classtype:attempted-recon; sid:1000001; rev:1;)"], attack_summary="x"))
 
     memory = RuleMemory(path=tmp_path / "rule_memory.json")
     verify_ctx = VerifyContext(attack_pcaps=[], benign_pcaps=[])

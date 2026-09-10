@@ -65,7 +65,6 @@ class AnthropicLLMClient:
                 lambda: self._client.messages.create(
                     model=model,
                     system=system_prompt,
-                    temperature=temperature,
                     max_tokens=4096,
                     messages=[{"role": "user", "content": json.dumps(user_content, ensure_ascii=False)}],
                     tools=[

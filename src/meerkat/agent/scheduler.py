@@ -9,12 +9,14 @@ from pathlib import Path
 
 from elasticsearch import AsyncElasticsearch
 
+from meerkat.agent.category_propose import propose_category
 from meerkat.agent.orchestrator import AlreadyCovered, ModelConfig, OrchestratorFailure, VerifyContext, orchestrate
 from meerkat.config import Settings, load_settings
 from meerkat.ingestion.pcap_capture import extract_flow_pcap, find_covering_files, list_pcap_log_files
 from meerkat.llm.client import LLMClient, create_llm_client
 from meerkat.mcp_server.tools.es_aggregate import es_aggregate
 from meerkat.mcp_server.tools.es_query import es_query_events
+from meerkat.storage.failure_queue import FailureQueue
 from meerkat.storage.rule_memory import RuleItem, RuleMemory
 
 logger = logging.getLogger(__name__)
@@ -46,11 +48,14 @@ async def run_forever(
     rule_memory: RuleMemory,
     models: ModelConfig,
     verify_ctx: VerifyContext,
+    failure_queue: FailureQueue,
     scheduler_config: SchedulerConfig = SchedulerConfig(),
 ) -> None:
     while True:
         try:
-            deployed = await poll_once(es_client, llm_client, rule_memory, models, verify_ctx, scheduler_config)
+            deployed = await poll_once(
+                es_client, llm_client, rule_memory, models, verify_ctx, failure_queue, scheduler_config
+            )
             if deployed:
                 logger.info("scheduler cycle deployed %d rule(s)", len(deployed))
         except Exception:
@@ -64,6 +69,7 @@ async def poll_once(
     rule_memory: RuleMemory,
     models: ModelConfig,
     verify_ctx: VerifyContext,
+    failure_queue: FailureQueue,
     config: SchedulerConfig,
 ) -> list[RuleItem]:
     now = datetime.datetime.now(datetime.timezone.utc)
@@ -123,9 +129,34 @@ async def poll_once(
                     "metric=%s src_ip=%s already covered by sid=%s, no action needed",
                     metric, offender.src_ip, exc.matched_sid,
                 )
-            except OrchestratorFailure:
+            except OrchestratorFailure as exc:
                 logger.warning(
                     "could not produce a verified rule for metric=%s src_ip=%s", metric, offender.src_ip
+                )
+                proposal = None
+                try:
+                    proposal = await propose_category(
+                        llm_client, flow_summary, str(exc), exc.draft_rule_text, models.relation_assess,
+                    )
+                except Exception:
+                    logger.exception(
+                        "category proposal failed for metric=%s src_ip=%s, recording without one",
+                        metric, offender.src_ip,
+                    )
+                await failure_queue.add(
+                    metric=metric,
+                    role_group_hint=role_group_hint,
+                    src_ip=offender.src_ip,
+                    reason=str(exc),
+                    flow_summary=flow_summary,
+                    draft_rule_text=exc.draft_rule_text,
+                    proposed_category=proposal.candidate_category_name if proposal else None,
+                    proposed_role_group=(
+                        proposal.model_dump(exclude={"candidate_category_name", "reasoning"})
+                        if proposal
+                        else None
+                    ),
+                    proposal_reasoning=proposal.reasoning if proposal else None,
                 )
 
     return deployed
@@ -186,7 +217,9 @@ def _try_extract_repr_pcap(sample_index: str, flow_summary: dict, pcap_log_dir: 
         return None
 
 
-def build_from_settings(settings: Settings) -> tuple[AsyncElasticsearch, LLMClient, RuleMemory, ModelConfig, VerifyContext]:
+def build_from_settings(
+    settings: Settings,
+) -> tuple[AsyncElasticsearch, LLMClient, RuleMemory, ModelConfig, VerifyContext, FailureQueue]:
     es_client = AsyncElasticsearch(
         hosts=settings.elasticsearch.hosts,
         basic_auth=(
@@ -208,19 +241,21 @@ def build_from_settings(settings: Settings) -> tuple[AsyncElasticsearch, LLMClie
         benign_pcaps=[str(p) for p in Path(settings.paths.pcaps_benign).glob("*.pcap")],
         suricata_binary=settings.suricata.binary,
     )
-    return es_client, llm_client, rule_memory, models, verify_ctx
+    failure_queue = FailureQueue()
+    return es_client, llm_client, rule_memory, models, verify_ctx, failure_queue
 
 
 async def main() -> None:
     logging.basicConfig(level=logging.INFO)
     settings = load_settings()
-    es_client, llm_client, rule_memory, models, verify_ctx = build_from_settings(settings)
+    es_client, llm_client, rule_memory, models, verify_ctx, failure_queue = build_from_settings(settings)
     await run_forever(
         es_client=es_client,
         llm_client=llm_client,
         rule_memory=rule_memory,
         models=models,
         verify_ctx=verify_ctx,
+        failure_queue=failure_queue,
         scheduler_config=SchedulerConfig(pcap_log_dir=settings.paths.pcap_log_dir),
     )
 

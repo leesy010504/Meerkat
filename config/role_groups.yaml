@@ -15,5 +15,8 @@ groups:
   dns-flood:
     protocols: [udp]
     direction: inbound
-    expected_keywords: [threshold, detection_filter]
+    # "53"/"dns"로 DNS 트래픽임을 확인한다 — threshold/detection_filter만 보면
+    # NTP/SSDP/memcached 같은 DNS와 무관한 UDP 증폭 공격도 protocol(udp)과
+    # classtype(denial-of-service)만으로 여기 잘못 흡수된다.
+    expected_keywords: ["53", "dns"]
     classtypes: [denial-of-service]

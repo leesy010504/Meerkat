@@ -1,4 +1,4 @@
-"""망가진 룰 20개에 대해 결정적 리라이트 결과를 검증한다."""
+"""망가진 룰 22개에 대해 결정적 리라이트 결과를 검증한다."""
 
 import pytest
 
@@ -128,6 +128,20 @@ BROKEN_RULES = [
         "duplicate_content_only_no_bug",
         'alert tcp any any -> any any (msg:"two contents"; content:"a"; content:"b"; sid:1000020; rev:1;)',
         None,  # 버그 없음 — 아무 리라이트도 적용되면 안 됨
+    ),
+    (
+        "empty_content",
+        'alert udp $EXTERNAL_NET any -> $HOME_NET 53 '
+        '(msg:"dns flood"; dns.query; content:""; threshold:type threshold, track by_src, '
+        "count 300, seconds 60; classtype:denial-of-service; sid:1000021; rev:1;)",
+        "empty_content",
+    ),
+    (
+        "orphaned_sticky_buffer",
+        'alert udp $EXTERNAL_NET any -> $HOME_NET 53 '
+        '(msg:"dns flood"; flow:to_server; dns.query; threshold:type threshold, track by_src, '
+        "count 300, seconds 60; classtype:denial-of-service; sid:1000022; rev:1;)",
+        "orphaned_sticky_buffer",
     ),
 ]
 

@@ -10,9 +10,10 @@ import pytest_asyncio
 from elasticsearch import AsyncElasticsearch
 
 from meerkat.agent.orchestrator import ModelConfig, VerifyContext
-from meerkat.agent.schemas import RelationAssessOutput, RuleGenerateOutput
+from meerkat.agent.schemas import CategoryProposalOutput, RelationAssessOutput, RuleGenerateOutput, RuleRepairOutput
 from meerkat.agent.scheduler import SchedulerConfig, poll_once
 from meerkat.ingestion.es_templates import build_all_templates
+from meerkat.storage.failure_queue import FailureQueue
 from meerkat.storage.rule_memory import RuleMemory
 
 from conftest import FakeLLMClient
@@ -114,7 +115,8 @@ async def test_poll_once_detects_anomaly_and_deploys_verified_rule(es_client: As
         metrics=("unique_dst_ports_per_src",),
     )
 
-    deployed = await poll_once(es_client, llm, rule_memory, MODELS, verify_ctx, config)
+    failure_queue = FailureQueue(path=tmp_path / "failure_queue.json")
+    deployed = await poll_once(es_client, llm, rule_memory, MODELS, verify_ctx, failure_queue, config)
 
     assert len(deployed) == 1
     assert deployed[0].origin == "generated"
@@ -122,6 +124,67 @@ async def test_poll_once_detects_anomaly_and_deploys_verified_rule(es_client: As
 
     stored = await rule_memory.list()
     assert len(stored) == 1
+
+
+@pytest.mark.asyncio
+async def test_poll_once_records_orchestrator_failure_in_queue(monkeypatch, es_client: AsyncElasticsearch, tmp_path):
+    """룰 검증이 끝까지 실패하면 배포는 안 되지만 failure_queue에 기록은 남아야 한다."""
+    import meerkat.agent.orchestrator as orch_module
+
+    def always_fail(rule_text, attack_pcaps, benign_pcaps, suricata_binary):
+        return False, rule_text, "no_trigger:never passes"
+
+    monkeypatch.setattr(orch_module, "_verify", always_fail)
+
+    now = datetime.datetime.now(datetime.timezone.utc)
+    await _seed_baseline_noise(es_client, now)
+
+    for port in range(80):
+        await es_client.index(
+            index=TEST_INDEX,
+            document={
+                "@timestamp": now.isoformat(),
+                "src_ip": "10.0.0.99",
+                "dest_ip": "10.0.0.1",
+                "dest_port": 2000 + port,
+                "proto": "TCP",
+                "event_type": "flow",
+            },
+        )
+    await es_client.indices.refresh(index=TEST_INDEX)
+
+    llm = FakeLLMClient()
+    llm.queue(RelationAssessOutput(is_variant=False, matched_sid=None, reasoning="새 유형 — 포트 스캔"))
+    llm.queue(RuleGenerateOutput(candidates=["rule that never verifies"], attack_summary="port scan"))
+    llm.queue(RuleRepairOutput(repaired_rule_text="still never verifies"))
+    llm.queue(
+        CategoryProposalOutput(
+            candidate_category_name="unverified-scan-variant",
+            protocols=["tcp"],
+            classtypes=["attempted-recon"],
+            direction="inbound",
+            expected_keywords=["threshold"],
+            reasoning="검증은 실패했지만 포트 스캔과 유사한 패턴",
+        )
+    )
+
+    rule_memory = RuleMemory(path=tmp_path / "rule_memory.json")
+    verify_ctx = VerifyContext(attack_pcaps=[], benign_pcaps=[])
+    config = SchedulerConfig(window_seconds=300, metrics=("unique_dst_ports_per_src",))
+    failure_queue = FailureQueue(path=tmp_path / "failure_queue.json")
+
+    deployed = await poll_once(es_client, llm, rule_memory, MODELS, verify_ctx, failure_queue, config)
+
+    assert deployed == []
+    recorded = await failure_queue.list()
+    assert len(recorded) == 1
+    assert recorded[0].metric == "unique_dst_ports_per_src"
+    assert recorded[0].role_group_hint == "scanning"
+    assert recorded[0].src_ip == "10.0.0.99"
+    assert recorded[0].draft_rule_text == "still never verifies"
+    assert recorded[0].proposed_category == "unverified-scan-variant"
+    assert recorded[0].proposed_role_group["protocols"] == ["tcp"]
+    assert recorded[0].proposal_reasoning == "검증은 실패했지만 포트 스캔과 유사한 패턴"
 
 
 @pytest.mark.asyncio
@@ -150,7 +213,8 @@ async def test_poll_once_skips_when_no_anomaly(es_client: AsyncElasticsearch, tm
     verify_ctx = VerifyContext(attack_pcaps=[], benign_pcaps=[])
     config = SchedulerConfig(window_seconds=300, metrics=("unique_dst_ports_per_src",))
 
-    deployed = await poll_once(es_client, llm, rule_memory, MODELS, verify_ctx, config)
+    failure_queue = FailureQueue(path=tmp_path / "failure_queue.json")
+    deployed = await poll_once(es_client, llm, rule_memory, MODELS, verify_ctx, failure_queue, config)
 
     assert deployed == []
     assert llm.calls == []
@@ -196,7 +260,8 @@ async def test_poll_once_extracts_repr_pcap_from_live_flow(es_client: AsyncElast
         pcap_log_dir=str(pcap_log_dir),
     )
 
-    deployed = await poll_once(es_client, llm, rule_memory, MODELS, verify_ctx, config)
+    failure_queue = FailureQueue(path=tmp_path / "failure_queue.json")
+    deployed = await poll_once(es_client, llm, rule_memory, MODELS, verify_ctx, failure_queue, config)
 
     assert len(deployed) == 1
     repr_pcap_path = deployed[0].repr_pcap_path

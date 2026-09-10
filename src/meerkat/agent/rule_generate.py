@@ -21,10 +21,14 @@ SYSTEM_PROMPT = """너는 새로 발견된 공격 트래픽에서 Suricata 탐�
 - 외부에서 내부로 들어오는 공격이면 헤더에 반드시 $EXTERNAL_NET(출발지)과 \
 $HOME_NET(목적지)을 써라. "any any -> any any"처럼 리터럴 any로 방향을 \
 뭉개지 마라 — 역할 그룹 매핑이 이 방향 정보로 룰을 검증한다.
-- target_role_group이 주어지면 그 안의 protocols/classtypes를 반드시 그대로 \
-써라. 예를 들어 protocols가 ["udp"]면 헤더 프로토콜은 udp여야 하고(예: "alert ip"처럼 \
-프로토콜을 뭉개지 마라), classtypes에 있는 값 중 하나를 classtype으로 써라. \
-target_role_group 없이는 지어내지 말고 flow_summary에서 실제로 보이는 프로토콜을 써라.
+- 헤더 프로토콜은 항상 flow_summary에서 실제로 관찰되는 프로토콜을 써라. \
+target_role_group은 "이 트래픽이 속할 것으로 예상되는 역할 그룹" 힌트일 뿐이지, \
+실제 관찰과 다르면 무시해도 되는 참고 정보다 — 힌트에 맞추려고 프로토콜이나 \
+classtype을 실제와 다르게 지어내지 마라. classtype은 공격의 실제 성격을 \
+가장 정확히 설명하는 표준 Suricata classtype을 골라라. target_role_group.classtypes에 \
+맞는 게 있으면 그걸 쓰고, 없으면 다른 표준 classtype을 써라 — 힌트에 없는 \
+classtype을 쓰는 것 자체는 문제가 아니다. 최종 역할 그룹 배정은 이후 별도의 \
+규칙 기반 검증이 담당하니, 여기서는 실제 관찰과의 정확성이 우선이다.
 
 suggested_threshold가 주어지면 threshold/detection_filter 절의 count와 seconds는 \
 그 값을 그대로 써라. 절대 임의로 지어내지 마라 (baseline에서 도출된 값이어야 한다).

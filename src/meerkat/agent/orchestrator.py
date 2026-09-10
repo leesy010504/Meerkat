@@ -22,7 +22,15 @@ N_MAX = 2  # 롤백 반복 상한
 
 
 class OrchestratorFailure(Exception):
-    pass
+    """마지막으로 시도한 룰 초안이 있으면 draft_rule_text에 담아둔다.
+
+    문법 검사조차 통과 못한 초안이 담길 수도 있다 — 사람이 검토할 후보일 뿐,
+    검증을 통과한 배포 가능한 룰이라는 보장은 아니다.
+    """
+
+    def __init__(self, message: str, draft_rule_text: str | None = None):
+        self.draft_rule_text = draft_rule_text
+        super().__init__(message)
 
 
 class AlreadyCovered(Exception):
@@ -117,7 +125,9 @@ async def orchestrate(
                         final_rule_text, role_group_hint, role_groups
                     )
                 except ValueError as exc:
-                    raise OrchestratorFailure(f"역할 그룹 결정 실패: {exc}") from exc
+                    raise OrchestratorFailure(
+                        f"역할 그룹 결정 실패: {exc}", draft_rule_text=final_rule_text
+                    ) from exc
                 return await record_generated_rule(
                     rule_memory, sid, final_rule_text, validated_role_group,
                     repr_event_ids, repr_pcap_path,
@@ -125,7 +135,8 @@ async def orchestrate(
 
         if force_new:
             raise OrchestratorFailure(
-                f"신규 생성 강제 후에도 K={K_MAX}회 수리 실패: {final_rule_text}"
+                f"신규 생성 강제 후에도 K={K_MAX}회 수리 실패: {final_rule_text}",
+                draft_rule_text=final_rule_text,
             )
 
         rollback_count += 1

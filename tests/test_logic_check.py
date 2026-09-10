@@ -91,6 +91,44 @@ def test_propose_role_groups_ranks_web_attack_first(role_groups):
     assert candidates and candidates[0] == "web-attack"
 
 
+def test_propose_role_groups_rejects_keyword_only_match(role_groups):
+    """threshold 키워드만 우연히 겹친다고 protocol/classtype이 안 맞는 그룹에
+    배정되면 안 된다 (SSH 브루트포스가 scanning으로 잘못 분류되던 버그)."""
+    ssh_bruteforce_rule = (
+        "alert tcp any any -> any 22 "
+        '(msg:"ssh auth brute force"; flow:to_server; flags:S; '
+        "threshold:type threshold, track by_src, count 1, seconds 60; "
+        "classtype:attempted-admin; sid:1000006; rev:1;)"
+    )
+    candidates = propose_role_groups(ssh_bruteforce_rule, role_groups)
+    assert candidates == []
+
+
 def test_dns_flood_rule_matches_dns_flood_group(role_groups):
     result = check_rule_logic(DNS_FLOOD_RULE, "dns-flood", role_groups)
     assert result.ok, result.reasons
+
+
+def test_non_dns_udp_dos_rejected_from_dns_flood_group(role_groups):
+    """dns-flood는 protocol=udp + classtype=denial-of-service만으로 정의돼 있으면
+    NTP 등 DNS와 무관한 UDP 증폭 공격까지 흡수한다 — "53"/"dns" 키워드 요건으로
+    막아야 한다."""
+    ntp_amplification_rule = (
+        'alert udp $EXTERNAL_NET any -> $HOME_NET 123 (msg:"ntp monlist amplification"; '
+        "classtype:denial-of-service; sid:1000007; rev:1;)"
+    )
+    assert propose_role_groups(ntp_amplification_rule, role_groups) == []
+    result = check_rule_logic(ntp_amplification_rule, "dns-flood", role_groups)
+    assert not result.ok
+    assert any("keyword" in reason for reason in result.reasons)
+
+
+def test_numeric_keyword_does_not_match_as_substring_of_sid(role_groups):
+    """expected_keywords의 숫자(포트) 키워드는 헤더의 목적지 포트와 정확히
+    일치할 때만 인정해야 한다 — sid가 253이면 "53"이 부분 문자열로 우연히
+    포함돼 있다고 dns-flood로 잘못 분류되면 안 된다 (UDP/161 snmp reflection)."""
+    snmp_reflection_rule = (
+        'alert udp $EXTERNAL_NET any -> $HOME_NET 161 '
+        '(msg:"snmp reflection dos"; classtype:denial-of-service; sid:253; rev:1;)'
+    )
+    assert propose_role_groups(snmp_reflection_rule, role_groups) == []
