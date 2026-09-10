@@ -116,6 +116,10 @@ async def _compute_offenders(
         by_src["terms"]["order"] = {"cardinality_value": "desc"}
 
     response = await client.search(index=index, query=query, size=0, aggs={"by_src": by_src})
+    # 인덱스 패턴에 매칭되는 인덱스가 아직 하나도 없으면(예: 이 지표의 로그 소스가
+    # 아직 배포 안 됨) ES가 200에 "aggregations" 키 자체를 안 준다.
+    if "aggregations" not in response:
+        return []
     buckets = response["aggregations"]["by_src"]["buckets"]
 
     offenders: list[Offender] = []
@@ -169,6 +173,8 @@ async def _compute_baseline_distribution(
     }
 
     response = await client.search(index=index, query=query, size=0, aggs=aggs)
+    if "aggregations" not in response:
+        return []
 
     values: list[float] = []
     for time_bucket in response["aggregations"]["over_time"]["buckets"]:

@@ -206,3 +206,23 @@ async def test_es_aggregate_dns_query_rate_detects_flood(es_client: AsyncElastic
     assert top.value >= 300
 
     await es_client.indices.delete(index=index, ignore_unavailable=True)
+
+
+@pytest.mark.asyncio
+async def test_es_aggregate_returns_no_offenders_when_index_pattern_matches_nothing(
+    es_client: AsyncElasticsearch,
+):
+    """지표의 로그 소스(예: nginx-access-*)가 아직 하나도 배포 안 됐으면 ES가
+    200에 "aggregations" 키 없이 응답한다 — KeyError 없이 빈 결과로 처리해야 한다."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    result = await es_aggregate(
+        es_client,
+        "unique_endpoints_per_src",
+        start=(now - datetime.timedelta(minutes=1)).isoformat(),
+        end=(now + datetime.timedelta(minutes=1)).isoformat(),
+        window_seconds=60,
+        compare_baseline=False,
+    )
+
+    assert result.top_offenders == []
