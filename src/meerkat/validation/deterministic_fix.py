@@ -56,10 +56,95 @@ def check_sid_conflict(rule_text: str, existing_sids: set[int]) -> bool:
     return int(match.group(1)) in existing_sids
 
 
+# ---- 정책 강제 (원칙: alert만, sid/rev는 코드가 정한다) ----------------------
+
+# IDS 모드 전용 — 이 액션들은 전부 alert로 바꾼다. 스펙 §3/§14: drop/reject 금지.
+_BLOCKING_ACTIONS = {"drop", "reject", "rejectsrc", "rejectdst", "rejectboth"}
+_SID_RE = re.compile(r"\bsid:\s*(\d+)\s*;")
+_REV_RE = re.compile(r"\brev:\s*(\d+)\s*;")
+
+
+def extract_action(rule_text: str) -> str | None:
+    tokens = rule_text.strip().split()
+    return tokens[0].lower() if tokens else None
+
+
+def extract_sid(rule_text: str) -> int | None:
+    match = _SID_RE.search(rule_text)
+    return int(match.group(1)) if match else None
+
+
+def extract_rev(rule_text: str) -> int | None:
+    match = _REV_RE.search(rule_text)
+    return int(match.group(1)) if match else None
+
+
+def fix_blocking_action(text: str) -> str:
+    """drop/reject 계열 액션을 alert로 바꾼다.
+
+    LLM이 "차단"을 의도하고 drop을 쓰더라도 Suricata는 IDS 모드로만 운용하므로
+    룰 파일에 drop이 들어가면 안 된다 — inline 전환 시 오탐이 곧 장애가 된다.
+    pass 같은 억제 액션은 의미가 완전히 달라서 여기서 고치지 않고 _verify에서 거부한다.
+    """
+    stripped = text.lstrip()
+    action = extract_action(stripped)
+    if action is None or action not in _BLOCKING_ACTIONS:
+        return text
+    leading = text[: len(text) - len(stripped)]
+    return leading + "alert" + stripped[len(action):]
+
+
+def set_sid_and_rev(rule_text: str, sid: int, rev: int) -> str:
+    """룰 텍스트의 sid/rev를 코드가 할당한 값으로 강제한다.
+
+    LLM이 available_sids 밖의 sid를 지어내거나 rev를 안 올리는 경우가 있어서,
+    rule_memory에 기록되는 RuleItem.sid/rev와 룰 텍스트가 항상 일치하게 맞춘다.
+    없으면 옵션 블록 끝에 덧붙인다.
+    """
+    header, options = _split_rule(rule_text)
+    if header is None:
+        return rule_text
+
+    new_options: list[str] = []
+    saw_sid = saw_rev = False
+    for opt in options:
+        stripped = opt.strip()
+        if re.match(r"^sid:\s*\d+$", stripped):
+            if saw_sid:
+                continue  # 중복 sid 절 제거
+            new_options.append(f"sid:{sid}")
+            saw_sid = True
+        elif re.match(r"^rev:\s*\d+$", stripped):
+            if saw_rev:
+                continue
+            new_options.append(f"rev:{rev}")
+            saw_rev = True
+        else:
+            new_options.append(opt)
+    if not saw_sid:
+        new_options.append(f"sid:{sid}")
+    if not saw_rev:
+        new_options.append(f"rev:{rev}")
+    return _join_rule(header, new_options)
+
+
 # ---- 패턴별 구현 --------------------------------------------------------
 
 
+# content 뒤에 붙을 수 있는 수정자들 — 이 사이에 레거시 버퍼 키워드가 와도 같은 content에 걸린 것이다
+_CONTENT_MODIFIERS_RE = re.compile(
+    r"^(nocase|fast_pattern(:.*)?|depth:.*|offset:.*|distance:.*|within:.*|startswith|endswith|bsize:.*)$"
+)
+
+
 def fix_legacy_http_modifier(text: str) -> str:
+    """`content:"x"; nocase; http_user_agent;` → `http.user_agent; content:"x"; nocase;`
+
+    Suricata 8은 레거시 modifier를 경고만 내고 받아주지만(그래서 검증은 통과한다), 룰셋이 두 문법으로
+    섞이면 사람이 읽기 어렵고 향후 버전에서 제거 대상이다. 실제 LLM이 `content; nocase; http_user_agent`
+    순서로 자주 쓰는 것을 라이브 데모에서 봤다 — content 바로 뒤뿐 아니라 수정자 몇 개 건너서 오는
+    레거시 키워드도 같은 content의 것으로 보고 스티키 버퍼 문법으로 옮긴다.
+    """
     header, options = _split_rule(text)
     if header is None:
         return text
@@ -70,13 +155,27 @@ def fix_legacy_http_modifier(text: str) -> str:
     while i < len(options):
         opt = options[i]
         content_match = re.match(r'content:\s*"(.*)"\s*$', opt.strip())
-        if content_match and i + 1 < len(options):
-            modifier = options[i + 1].strip()
-            if modifier in LEGACY_HTTP_MODIFIERS:
-                buffer_name = LEGACY_HTTP_MODIFIERS[modifier]
-                new_options.append(f"{buffer_name}; content:\"{content_match.group(1)}\"")
+        if content_match:
+            # content 다음에 오는 수정자들을 모으고, 그 뒤(또는 사이)에 레거시 버퍼 키워드가 있는지 본다
+            j = i + 1
+            modifiers: list[str] = []
+            legacy: str | None = None
+            while j < len(options):
+                candidate = options[j].strip()
+                if candidate in LEGACY_HTTP_MODIFIERS and legacy is None:
+                    legacy = candidate
+                    j += 1
+                    continue
+                if _CONTENT_MODIFIERS_RE.match(candidate):
+                    modifiers.append(candidate)
+                    j += 1
+                    continue
+                break
+            if legacy is not None:
+                new_options.append(f"{LEGACY_HTTP_MODIFIERS[legacy]}; content:\"{content_match.group(1)}\"")
+                new_options.extend(modifiers)
                 changed = True
-                i += 2
+                i = j
                 continue
         new_options.append(opt)
         i += 1
@@ -328,6 +427,7 @@ def fix_orphaned_sticky_buffer(text: str) -> str:
 
 
 _PIPELINE: list[tuple[str, Callable[[str], str]]] = [
+    ("blocking_action", fix_blocking_action),
     ("legacy_http_modifier", fix_legacy_http_modifier),
     ("tshark_field_misuse", fix_tshark_field_names),
     ("direction_conflict", fix_direction_conflict),

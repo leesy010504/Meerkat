@@ -179,3 +179,69 @@ def test_sid_conflict_detection():
     rule_text = 'alert tcp any any -> any any (msg:"x"; sid:1000001; rev:1;)'
     assert check_sid_conflict(rule_text, {1000001, 2000000}) is True
     assert check_sid_conflict(rule_text, {2000000}) is False
+
+
+# ---- 정책 강제 헬퍼 ----------------------------------------------------------
+
+
+def test_drop_action_is_rewritten_to_alert():
+    from meerkat.validation.deterministic_fix import fix_blocking_action
+
+    rule = 'drop tcp $EXTERNAL_NET any -> $HOME_NET 80 (msg:"x"; sid:1000001; rev:1;)'
+    result = apply_deterministic_fixes(rule)
+    assert result.rule_text.startswith("alert tcp")
+    assert "blocking_action" in result.applied_fixes
+    # reject 계열도 전부 alert로
+    for action in ("reject", "rejectsrc", "rejectdst", "rejectboth", "DROP"):
+        assert fix_blocking_action(f"{action} tcp any any -> any any (sid:1;)").startswith("alert ")
+
+
+def test_pass_action_is_left_alone_for_policy_gate():
+    from meerkat.validation.deterministic_fix import fix_blocking_action
+
+    rule = 'pass tcp any any -> any any (msg:"x"; sid:1000001; rev:1;)'
+    assert fix_blocking_action(rule) == rule
+    assert fix_blocking_action("alert tcp any any -> any any (sid:1;)") == "alert tcp any any -> any any (sid:1;)"
+
+
+def test_set_sid_and_rev_replaces_or_appends():
+    from meerkat.validation.deterministic_fix import (
+        extract_rev,
+        extract_sid,
+        set_sid_and_rev,
+    )
+
+    replaced = set_sid_and_rev('alert tcp any any -> any any (msg:"x"; sid:5; rev:9;)', 1000003, 2)
+    assert extract_sid(replaced) == 1000003 and extract_rev(replaced) == 2
+    assert replaced.count("sid:") == 1 and replaced.count("rev:") == 1
+
+    appended = set_sid_and_rev('alert tcp any any -> any any (msg:"x";)', 1000004, 1)
+    assert appended.endswith("sid:1000004; rev:1;)")
+
+    # msg 안의 "sid:"는 옵션이 아니라 문자열이므로 건드리지 않는다
+    quoted = set_sid_and_rev('alert tcp any any -> any any (msg:"fake sid:1;"; sid:5; sid:6; rev:1;)', 7, 1)
+    assert 'msg:"fake sid:1;"' in quoted
+    assert quoted.count("sid:7") == 1 and "sid:5" not in quoted and "sid:6" not in quoted
+
+
+def test_legacy_modifier_after_nocase_is_converted_to_sticky_buffer():
+    """라이브 데모에서 Gemini가 낸 형태: content; nocase; http_user_agent; → http.user_agent; content; nocase;"""
+    rule = (
+        'alert http $EXTERNAL_NET any -> $HOME_NET any (msg:"gobuster"; flow:established,to_server; '
+        'content:"gobuster"; nocase; http_user_agent; threshold:type threshold, track by_src, count 5, seconds 300; '
+        "classtype:web-application-attack; sid:1000000; rev:1;)"
+    )
+    result = apply_deterministic_fixes(rule)
+    assert "legacy_http_modifier" in result.applied_fixes
+    assert 'http.user_agent; content:"gobuster"; nocase; threshold:' in result.rule_text
+    assert "http_user_agent" not in result.rule_text
+    # 변환 결과도 suricata가 그대로 받아야 한다
+    from meerkat.validation.syntax import check_rule_syntax
+
+    assert check_rule_syntax(result.rule_text).ok
+
+
+def test_legacy_modifier_with_fast_pattern_and_depth_keeps_modifiers_in_order():
+    rule = 'alert tcp any any -> any 80 (content:"/admin"; depth:6; fast_pattern; http_uri; sid:1;)'
+    fixed = apply_deterministic_fixes(rule).rule_text
+    assert fixed == 'alert tcp any any -> any 80 (http.uri; content:"/admin"; depth:6; fast_pattern; sid:1;)'
