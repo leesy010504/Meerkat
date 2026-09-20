@@ -2,8 +2,6 @@ import argparse
 import json
 from pathlib import Path
 
-from meerkat.validation.replay import replay_rule
-
 from eval.metrics import (
     rule_count,
     rule_usability_rate,
@@ -11,6 +9,7 @@ from eval.metrics import (
     semantic_similarity,
     syntax_accuracy,
 )
+from meerkat.validation.replay import replay_rule
 
 
 def load_rules(rules_dir: str) -> list[str]:

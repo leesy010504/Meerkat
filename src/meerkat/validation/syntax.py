@@ -4,6 +4,8 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from meerkat.validation.suricata_env import suricata_set_args
+
 
 class SyntaxResult(BaseModel):
     ok: bool
@@ -16,7 +18,7 @@ def check_rule_syntax(rule_text: str, suricata_binary: str = "suricata") -> Synt
         rule_path.write_text(rule_text)
 
         result = subprocess.run(
-            [suricata_binary, "-T", "-S", str(rule_path), "-l", tmp],
+            [suricata_binary, "-T", "-S", str(rule_path), "-l", tmp, *suricata_set_args()],
             capture_output=True,
             text=True,
         )

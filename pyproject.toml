@@ -12,6 +12,7 @@ dependencies = [
     "google-genai>=1.0",
     "transformers>=4.45",
     "torch>=2.4",
+    "python-dotenv>=1.0",
 ]
 
 [dependency-groups]
