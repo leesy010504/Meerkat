@@ -26,8 +26,10 @@ def compute_baseline(values: list[float]) -> BaselineStats:
 
 
 def suggested_threshold(baseline: BaselineStats, margin: float = 1.0) -> int:
-    """p99 기반 임계값 후보를 계산한다. margin은 p99에 곱하는 배수."""
-    return max(1, round(baseline.p99 * margin))
+    """p99 기반 임계값 후보를 계산한다. margin은 p99에 곱하는 배수 (올림)."""
+    import math
+
+    return max(1, math.ceil(baseline.p99 * margin))
 
 
 def _percentile(sorted_vals: list[float], pct: float) -> float:

@@ -37,7 +37,8 @@ _RETURN_FIELDS: dict[str, list[str]] = {
         "@timestamp", "src_ip", "dest_ip", "tls.sni", "tls.version", "tls.ja3.hash",
     ],
     "nginx-access": [
-        "@timestamp", "src_ip", "nginx.path", "nginx.status", "nginx.request_time",
+        "@timestamp", "src_ip", "nginx.path", "nginx.status", "nginx.method",
+        "nginx.user_agent", "nginx.request_time",
     ],
 }
 

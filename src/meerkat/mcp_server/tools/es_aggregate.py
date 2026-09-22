@@ -76,7 +76,10 @@ async def es_aggregate(
     window_seconds: int,
     top_n: int = 20,
     compare_baseline: bool = True,
+    threshold_margin: float = 1.0,
 ) -> AggregateResult:
+    """threshold_margin: p99에 곱하는 여유 배수. 1.0이면 정상 윈도우의 1%가 임계값을 넘는다는 뜻이므로
+    룰의 count로 쓸 때는 1.5~2.0처럼 여유를 두는 게 보통이다 (스케줄러가 지정)."""
     offenders = await _compute_offenders(client, metric, start, end, top_n)
 
     baseline = None
@@ -86,7 +89,7 @@ async def es_aggregate(
         # 표본이 부족하면 판단을 보류한다
         if len(values) >= MIN_BASELINE_SAMPLES:
             baseline = compute_baseline(values)
-            threshold = _suggested_threshold(baseline)
+            threshold = _suggested_threshold(baseline, threshold_margin)
 
     return AggregateResult(
         metric=metric,

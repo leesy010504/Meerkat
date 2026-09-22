@@ -83,6 +83,8 @@ _INDEX_SPECIFIC_PROPERTIES: dict[str, dict] = {
             "properties": {
                 "path": {"type": "keyword"},
                 "status": {"type": "integer"},
+                "method": {"type": "keyword"},
+                "user_agent": {"type": "keyword"},
                 "request_time": {"type": "float"},
                 "raw_line": {"type": "text", "index": False},
             }
