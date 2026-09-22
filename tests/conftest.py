@@ -20,3 +20,16 @@ class FakeLLMClient:
         if not bucket:
             raise AssertionError(f"no queued response for {output_schema.__name__}")
         return bucket.pop(0) if len(bucket) > 1 else bucket[0]
+
+
+import pytest  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _reset_llm_key_state():
+    """키 거부/소진 상태는 프로세스 전역이라 테스트끼리 새지 않게 매번 비운다."""
+    from meerkat.llm.client import reset_key_state
+
+    reset_key_state()
+    yield
+    reset_key_state()

@@ -24,3 +24,9 @@ paths:
   pcaps_benign: "pcaps/benign"
   rules_dir: "rules"
   pcap_log_dir: null  # Suricata pcap-log 회전 파일 디렉토리
+
+deploy:
+  mode: "file"  # none | file | pr — pr은 repo_dir가 별도 GitOps 룰 레포 체크아웃일 때만 쓴다
+  repo_dir: "."
+  proposals_dir: ".meerkat/deploy_proposals"
+  audit_log_path: ".meerkat/audit/decisions.jsonl"  # 판단 과정 JSONL (사람 열람·평가 집계용)

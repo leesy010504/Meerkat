@@ -6,10 +6,13 @@ import os
 import pytest
 from pydantic import BaseModel
 
-from meerkat.llm.client import GeminiLLMClient, SchemaViolationError
+from meerkat.llm.client import GeminiLLMClient
 
+# 실제 Gemini 호출은 무료 티어 일일 한도(모델당 20회)를 먹는다 — 전체 테스트를 돌릴 때마다 2회씩
+# 나가면 데모/평가에 쓸 몫이 사라지므로 MEERKAT_RUN_LIVE_LLM=1 을 켠 경우에만 돈다.
 pytestmark = pytest.mark.skipif(
-    not os.environ.get("GEMINI_API_KEY"), reason="GEMINI_API_KEY not set"
+    not (os.environ.get("GEMINI_API_KEY") and os.environ.get("MEERKAT_RUN_LIVE_LLM") == "1"),
+    reason="live Gemini tests are opt-in: set MEERKAT_RUN_LIVE_LLM=1 (and GEMINI_API_KEY)",
 )
 
 
