@@ -16,7 +16,7 @@ services:
   target-nginx:
     image: nginx:alpine
     ports:
-      - "8080:80"
+      - "${MEERKAT_NGINX_PORT:-8080}:80"
     volumes:
       - ./tests/fixtures/target-web:/usr/share/nginx/html:ro
 
@@ -30,3 +30,11 @@ services:
       - USER_PASSWORD=password123
     ports:
       - "2222:2222"
+
+  # DNS 플러드 시나리오용 로컬 리졸버 — 업스트림 없이 모든 이름에 고정 응답(외부로 질의가 나가지 않음)
+  target-dns:
+    image: jpillora/dnsmasq:latest
+    volumes:
+      - ./tests/fixtures/target-dns/dnsmasq.conf:/etc/dnsmasq.conf:ro
+    ports:
+      - "53:53/udp"

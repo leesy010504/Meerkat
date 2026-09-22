@@ -1,0 +1,32 @@
+# 공격 재현 pcap ↔ 역할 그룹/지표 매핑. validation/corpus.py가 읽는다.
+#
+# 검증(⑥ 트리거 / ⑦ 오탐)에서 쓰는 방식:
+#   - 룰이 들어갈 역할 그룹의 pcap에서는 알럿이 나야 하고(positive),
+#   - 다른 역할 그룹의 공격 pcap에서는 정상 트래픽과 똑같이 알럿이 없어야 한다(negative).
+# "공격 pcap 아무거나 하나에서 울리면 통과"였던 느슨한 기준을 "자기 공격만 잡는다"로 바꾸는 장치다.
+# 스펙 §8 "각 룰은 단일 이슈만 타겟"의 실행 기준.
+port_scan.pcap:
+  role_group: scanning
+  metric: unique_dst_ports_per_src
+  scenario: nmap -T4 -p- (scripts/attack_scenarios/port_scan.py)
+dir_bruteforce.pcap:
+  role_group: web-attack
+  metric: unique_endpoints_per_src
+  scenario: gobuster dir (scripts/attack_scenarios/dir_bruteforce.py)
+auth_bruteforce.pcap:
+  role_group: auth-bruteforce
+  metric: conn_count_per_src_port
+  scenario: hydra ssh (scripts/attack_scenarios/auth_bruteforce.py)
+dns_query_burst.pcap:
+  role_group: dns-flood
+  metric: dns_query_rate_per_src
+  scenario: dig burst vs local dnsmasq (scripts/attack_scenarios/dns_query_burst.py)
+# ── 어려운 변형 (eval/ablation.py --scenarios hard) ──
+ua_spoofed_dirbust.pcap:
+  role_group: web-attack
+  metric: unique_endpoints_per_src
+  scenario: gobuster dir with Chrome UA, 2 threads (scripts/attack_scenarios/ua_spoofed_dirbust.py)
+slow_port_scan.pcap:
+  role_group: scanning
+  metric: unique_dst_ports_per_src
+  scenario: nmap -sT --scan-delay 1s -p 1-300 (scripts/attack_scenarios/slow_port_scan.py)
