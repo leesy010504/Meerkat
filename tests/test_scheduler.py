@@ -7,26 +7,31 @@ from pathlib import Path
 
 import pytest
 import pytest_asyncio
+from conftest import FakeLLMClient
 from elasticsearch import AsyncElasticsearch
 
 from meerkat.agent.orchestrator import ModelConfig, VerifyContext
-from meerkat.agent.schemas import CategoryProposalOutput, RelationAssessOutput, RuleGenerateOutput, RuleRepairOutput
 from meerkat.agent.scheduler import SchedulerConfig, poll_once
+from meerkat.agent.schemas import (
+    CategoryProposalOutput,
+    RelationAssessOutput,
+    RuleGenerateOutput,
+    RuleRepairOutput,
+)
 from meerkat.ingestion.es_templates import build_all_templates
 from meerkat.storage.failure_queue import FailureQueue
 from meerkat.storage.rule_memory import RuleMemory
-
-from conftest import FakeLLMClient
 
 ES_URL = "http://localhost:9200"
 TEST_INDEX = "suricata-flow-000001"
 
 MODELS = ModelConfig(relation_assess="fake", rule_generate="fake", rule_repair="fake", rule_select="fake")
 
-# rules/scanning.rules와 동일한 포트스캔 탐지 룰
+# rules/scanning.rules와 동일한 포트스캔 탐지 룰. flags:S,12로 SYN만 세야 한다 — 모든 to_server
+# 패킷을 세면 정상 브라우징(pcaps/benign/web_browsing.pcap)에서도 60초에 70개를 넘겨 오탐이 된다.
 KNOWN_GOOD_SCAN_RULE = (
-    'alert tcp any any -> any any (msg:"LOCAL Port Scan - Multiple Ports from Single Source"; '
-    "flow:to_server; threshold:type threshold, track by_src, count 70, seconds 60; "
+    'alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:"LOCAL Port Scan - Multiple Ports from Single Source"; '
+    "flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 200, seconds 60; "
     "classtype:attempted-recon; sid:1000000; rev:1;)"
 )
 
