@@ -27,11 +27,12 @@ def load_role_groups(path: str | Path = "config/role_groups.yaml") -> dict[str, 
 def propose_role_groups(rule_text: str, role_groups: dict[str, RoleGroupDef]) -> list[str]:
     """확정이 아니라 후보 제시용 — 최종 확정은 check_rule_logic이 규칙 기반으로 한다.
 
-    protocol, classtype(정의돼 있으면), expected_keywords(정의돼 있으면) 전부 \
+    protocol, classtype(정의돼 있으면), expected_keywords(정의돼 있으면), 방향 전부 \
     일치해야 후보 자격이 있다 — check_rule_logic의 필수조건과 동일하게 맞춘다. \
     이 중 하나라도 가점 취급하면, 예를 들어 threshold/detection_filter처럼 여러 \
     그룹에 공통으로 등장하는 키워드 하나만으로 protocol/classtype이 안 맞는 \
-    그룹에 잘못 배정될 수 있다.
+    그룹에 잘못 배정될 수 있다. 방향도 마찬가지다 — 여기서 방향을 빼면 LLM 후보가 \
+    방향 불일치로 거부된 룰이 폴백 경로로 같은 그룹에 그대로 배정돼 검사가 무의미해진다.
     """
     candidates: list[str] = []
     for name, group in role_groups.items():
@@ -40,6 +41,8 @@ def propose_role_groups(rule_text: str, role_groups: dict[str, RoleGroupDef]) ->
         if group.classtypes and not _classtype_matches(rule_text, group):
             continue
         if group.expected_keywords and not _has_expected_keyword(rule_text, group):
+            continue
+        if not _direction_matches(rule_text, group):
             continue
         candidates.append(name)
 
@@ -136,4 +139,9 @@ def _direction_matches(rule_text: str, group: RoleGroupDef) -> bool:
         return False
 
     # inbound는 EXTERNAL_NET이 출발지, HOME_NET이 목적지여야 한다
-    return "EXTERNAL_NET" in match.group("src") and "HOME_NET" in match.group("dst")
+    if "EXTERNAL_NET" in match.group("src") and "HOME_NET" in match.group("dst"):
+        return True
+    # 응답 쪽을 보는 룰(flow:to_client — 예: 외부 출발지로 나가는 404 폭증)은 헤더가 뒤집혀 있어도
+    # 공격 자체는 inbound다. 헤더가 HOME_NET → EXTERNAL_NET이고 to_client/from_server일 때만 인정한다.
+    responder_side = re.search(r"flow\s*:[^;]*\b(to_client|from_server)\b", rule_text) is not None
+    return responder_side and "HOME_NET" in match.group("src") and "EXTERNAL_NET" in match.group("dst")

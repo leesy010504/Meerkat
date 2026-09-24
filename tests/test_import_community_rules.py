@@ -2,15 +2,14 @@
 
 import pytest
 
-from meerkat.storage.rule_memory import RuleItem, RuleMemory
-
+from meerkat.storage.rule_memory import RuleMemory
+from meerkat.validation.logic_check import load_role_groups
 from scripts.import_community_rules import (
     classify_strict,
     extract_sid,
-    is_alert_action,
     import_rules,
+    is_alert_action,
 )
-from meerkat.validation.logic_check import load_role_groups
 
 
 def test_is_alert_action():

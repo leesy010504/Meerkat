@@ -20,3 +20,11 @@ groups:
     # classtype(denial-of-service)만으로 여기 잘못 흡수된다.
     expected_keywords: ["53", "dns"]
     classtypes: [denial-of-service]
+
+  auth-bruteforce:
+    protocols: [tcp]
+    direction: inbound
+    # 인증 브루트포스는 단일 출발지가 같은 서비스 포트로 짧은 시간에 반복 접속하는 rate 패턴이다.
+    # 포트스캔(scanning)과는 classtype으로 구분한다 — attempted-recon이 아니라 계정 탈취 시도.
+    expected_keywords: [threshold, detection_filter]
+    classtypes: [attempted-admin, attempted-user, unsuccessful-user]

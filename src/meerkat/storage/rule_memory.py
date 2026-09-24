@@ -17,7 +17,12 @@ class RuleItem(BaseModel):
     repr_pcap_path: str | None = None
     created_at: datetime
     updated_at: datetime
-    origin: Literal["generated", "repaired", "imported"]
+    # generated/repaired: 에이전트 산출물, imported: ET Open 등 대량 커뮤니티 룰(LLM 컨텍스트 제외),
+    # manual: 사람이 rules/*.rules에 직접 넣은 룰 (LLM 컨텍스트에 포함 — 수십 개 규모라는 전제)
+    origin: Literal["generated", "repaired", "imported", "manual"]
+    # 사람이 읽는 판단 근거(관계 판단 reasoning + 공격 요약). PR/제안서 본문에만 쓰이고
+    # 어떤 LLM 프롬프트에도 들어가지 않는다 (relation_assess는 sid/rule_text/role_group만 넘긴다).
+    rationale: str | None = None
 
 
 class RuleMemory:

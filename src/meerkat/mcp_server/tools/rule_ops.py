@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import Literal
 
@@ -29,3 +30,17 @@ def allocate_sid(existing_sids: set[int], sid_range: tuple[int, int] = (1000000,
         if candidate not in existing_sids:
             return candidate
     raise RuntimeError("no available sid in local range")
+
+
+_SID_RE = re.compile(r"\bsid:\s*(\d+)\s*;")
+
+
+def sids_in_rules_dir(rules_dir: str | Path) -> set[int]:
+    """rules/*.rules에 들어있는 sid 전부 (주석 처리된 줄 포함 — 되살릴 수 있으니 예약 취급)."""
+    sids: set[int] = set()
+    for path in Path(rules_dir).glob("*.rules"):
+        for line in path.read_text().splitlines():
+            match = _SID_RE.search(line)
+            if match:
+                sids.add(int(match.group(1)))
+    return sids
