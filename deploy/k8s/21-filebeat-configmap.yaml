@@ -1,4 +1,8 @@
-# eve.json 필드명을 그대로 색인한다 (Filebeat Suricata 모듈 미사용)
+# eve.json 필드명을 그대로 색인한다 (Filebeat Suricata 모듈 미사용).
+# 로컬 적재 경로(src/meerkat/ingestion/eve_ingest.py)와 같은 문서 모양·인덱스 이름을 만들어야 한다:
+#   - @timestamp는 Filebeat 수집 시각이 아니라 eve의 timestamp
+#   - 인덱스는 suricata-<event_type>-yyyy.MM.dd, 템플릿이 있는 5개 타입만 (stats/fileinfo 등은 버림)
+#   - ingress-nginx access log는 nginx-access-yyyy.MM.dd 로, nginx.path/status/method/user_agent 필드
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -13,18 +17,92 @@ data:
         json.keys_under_root: true
         json.add_error_key: true
         json.overwrite_keys: true
+        fields:
+          log_kind: suricata
+        fields_under_root: true
+        processors:
+          # 템플릿(es_templates.py)이 있는 이벤트 타입만 남긴다 — 나머지는 색인 비용만 든다
+          - drop_event:
+              when:
+                not:
+                  or:
+                    - equals: { event_type: alert }
+                    - equals: { event_type: flow }
+                    - equals: { event_type: http }
+                    - equals: { event_type: dns }
+                    - equals: { event_type: tls }
+          # eve의 timestamp("2026-10-05T10:00:00.123456+0900")를 @timestamp로
+          - timestamp:
+              field: timestamp
+              layouts:
+                - "2006-01-02T15:04:05.999999-0700"
+                - "2006-01-02T15:04:05.999999Z07:00"
+              test:
+                - "2026-10-05T10:00:00.123456+0900"
+          # 원본 페이로드/패킷 덤프는 LLM에도 ES 검색에도 안 쓴다 — 보관 비용만 들어 버린다
+          - drop_fields:
+              fields: ["payload", "payload_printable", "packet", "packet_info", "http.http_headers_raw", "files"]
+              ignore_missing: true
+
+      # ingress-nginx access log (컨테이너 stdout, combined 포맷)
+      - type: filestream
+        id: ingress-nginx
+        paths:
+          - /var/log/containers/*ingress-nginx*.log
+        parsers:
+          - container: ~
+        fields:
+          log_kind: nginx-access
+        fields_under_root: true
+        processors:
+          - dissect:
+              tokenizer: '%{src_ip} - %{ident} [%{time}] "%{method} %{path} %{proto}" %{status|integer} %{bytes} "%{referer}" "%{user_agent}"'
+              field: message
+              target_prefix: ""
+              ignore_failure: true
+          - drop_event:
+              when:
+                not:
+                  has_fields: ["status"]
+          - timestamp:
+              field: time
+              layouts:
+                - "02/Jan/2006:15:04:05 -0700"
+          - script:
+              lang: javascript
+              source: >
+                function process(event) {
+                  var path = event.Get("path") || "";
+                  var q = path.indexOf("?");
+                  event.Put("nginx.path", q >= 0 ? path.substring(0, q) : path);
+                  event.Put("nginx.status", event.Get("status"));
+                  event.Put("nginx.method", event.Get("method"));
+                  event.Put("nginx.user_agent", event.Get("user_agent"));
+                  event.Put("nginx.raw_line", event.Get("message"));
+                  event.Put("event_type", "nginx-access");
+                }
+          - drop_fields:
+              fields: ["ident", "time", "method", "path", "proto", "status", "bytes", "referer", "user_agent", "message"]
+              ignore_missing: true
 
     processors:
       - drop_event:
           when:
             not:
               has_fields: ["event_type"]
+      - drop_fields:
+          fields: ["agent", "ecs", "host", "input", "log", "log_kind"]
+          ignore_missing: true
 
     output.elasticsearch:
       hosts: ["elasticsearch.meerkat.svc.cluster.local:9200"]
-      index: "suricata-%{[event_type]}-%{+yyyy.MM.dd}"
+      indices:
+        - index: "nginx-access-%{+yyyy.MM.dd}"
+          when.equals:
+            event_type: nginx-access
+        - index: "suricata-%{[event_type]}-%{+yyyy.MM.dd}"
 
-    setup.template.enabled: false
+    setup.template.enabled: false   # 인덱스 템플릿은 scripts/apply_es_templates.py 가 넣는다
     setup.ilm.enabled: false
 
     logging.level: info
