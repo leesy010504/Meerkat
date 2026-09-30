@@ -1,0 +1,108 @@
+[
+  {
+    "condition": "none",
+    "rules": 0,
+    "SA": 0.0,
+    "DR": 0.0,
+    "FPR": 0.0,
+    "SE": 0.5,
+    "SS": null,
+    "llm_calls": 2,
+    "repairs": 0,
+    "failures": 2,
+    "truncated": false,
+    "outcomes": [
+      {
+        "scenario": "ua_spoofed_dirbust",
+        "condition": "none",
+        "produced": false,
+        "rule_text": null,
+        "syntax_ok": false,
+        "triggers_attack": false,
+        "false_positive": false,
+        "role_group": null,
+        "llm_calls": 1,
+        "repairs": {},
+        "semantic_similarity": null,
+        "error": "error: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}",
+        "attempts": []
+      },
+      {
+        "scenario": "slow_port_scan",
+        "condition": "none",
+        "produced": false,
+        "rule_text": null,
+        "syntax_ok": false,
+        "triggers_attack": false,
+        "false_positive": false,
+        "role_group": null,
+        "llm_calls": 1,
+        "repairs": {},
+        "semantic_similarity": null,
+        "error": "error: traffic already covered by existing rule sid=1000000",
+        "attempts": [
+          {
+            "phase": "repair",
+            "attempt": 0,
+            "passed": true,
+            "failure_kind": null,
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"TCP Port Scan Detected\"; threshold: type threshold, track by_src, count 210, seconds 60; classtype:attempted-recon; sid:1000000; rev:1;)"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "condition": "full",
+    "rules": 1,
+    "SA": 1.0,
+    "DR": 0.5,
+    "FPR": 0.0,
+    "SE": 0.75,
+    "SS": 0.6666666666666666,
+    "llm_calls": 3,
+    "repairs": 0,
+    "failures": 1,
+    "truncated": false,
+    "outcomes": [
+      {
+        "scenario": "ua_spoofed_dirbust",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert http $EXTERNAL_NET any -> $HOME_NET any (msg:\"Possible Web Directory Scanning or Brute Force Attempt\"; http.method; content:\"GET\"; threshold: type threshold, track by_src, count 270, seconds 60; classtype:web-application-attack; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "web-attack",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.6666666666666666,
+        "error": null,
+        "attempts": [
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": true,
+            "failure_kind": null,
+            "rule": "alert http $EXTERNAL_NET any -> $HOME_NET any (msg:\"Possible Web Directory Scanning or Brute Force Attempt\"; http.method; content:\"GET\"; threshold: type threshold, track by_src, count 270, seconds 60; classtype:web-application-attack; sid:1000000; rev:1;)"
+          }
+        ]
+      },
+      {
+        "scenario": "slow_port_scan",
+        "condition": "full",
+        "produced": false,
+        "rule_text": null,
+        "syntax_ok": false,
+        "triggers_attack": false,
+        "false_positive": false,
+        "role_group": null,
+        "llm_calls": 1,
+        "repairs": {},
+        "semantic_similarity": null,
+        "error": "error: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}",
+        "attempts": []
+      }
+    ]
+  }
+]

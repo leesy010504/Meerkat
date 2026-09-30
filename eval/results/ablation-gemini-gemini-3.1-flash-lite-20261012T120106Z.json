@@ -1,0 +1,78 @@
+[
+  {
+    "condition": "full",
+    "rules": 4,
+    "SA": 1.0,
+    "DR": 1.0,
+    "FPR": 0.0,
+    "SE": 1.0,
+    "SS": 0.8083333333333333,
+    "llm_calls": 11,
+    "repairs": 3,
+    "failures": 0,
+    "truncated": false,
+    "outcomes": [
+      {
+        "scenario": "port_scan",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"ET SCAN Potential TCP Port Scan\"; flow:stateless; flags:S,12; detection_filter:track by_src, count 140, seconds 300; classtype:network-scan; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "scanning",
+        "llm_calls": 3,
+        "repairs": {
+          "false_positive": 1
+        },
+        "semantic_similarity": 0.8,
+        "error": null
+      },
+      {
+        "scenario": "ssh_bruteforce",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET 2222 (msg:\"ET SCAN Potential SSH Brute Force Attempt\"; flow:to_server,established; detection_filter:track by_src,count 12,seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.6,
+        "error": null
+      },
+      {
+        "scenario": "dir_bruteforce",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert http $EXTERNAL_NET any -> $HOME_NET any (msg:\"ET WEB_SPECIFIC_APPS Gobuster Directory Brute Force Attempt\"; flow:established,to_server; http.user_agent; content:\"gobuster\"; nocase; threshold:type threshold, track by_src, count 5, seconds 60; classtype:web-application-attack; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "web-attack",
+        "llm_calls": 4,
+        "repairs": {
+          "no_trigger": 1,
+          "role_group": 1
+        },
+        "semantic_similarity": 0.8333333333333334,
+        "error": null
+      },
+      {
+        "scenario": "dns_query_burst",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert udp $EXTERNAL_NET any -> $HOME_NET 53 (msg:\"ET DOS DNS Query Flood from Single Source\"; dns.query; content:\".flood-test.example\"; nocase; threshold:type threshold, track by_src, count 100, seconds 60; classtype:denial-of-service; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "dns-flood",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null
+      }
+    ]
+  }
+]

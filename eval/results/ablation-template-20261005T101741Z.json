@@ -1,0 +1,229 @@
+[
+  {
+    "condition": "none",
+    "rules": 3,
+    "SA": 1.0,
+    "DR": 1.0,
+    "FPR": 0.3333333333333333,
+    "SE": 0.8333333333333334,
+    "SS": 0.9333333333333332,
+    "llm_calls": 7,
+    "repairs": 0,
+    "failures": 0,
+    "outcomes": [
+      {
+        "scenario": "port_scan",
+        "condition": "none",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 60, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null
+      },
+      {
+        "scenario": "ssh_bruteforce",
+        "condition": "none",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Connection Flood from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 10, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": true,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.8,
+        "error": null
+      },
+      {
+        "scenario": "dir_bruteforce",
+        "condition": "none",
+        "produced": true,
+        "rule_text": "alert http $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Scanner User-Agent gobuster\"; flow:to_server; http.user_agent; content:\"gobuster\"; nocase; classtype:web-application-attack; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "web-attack",
+        "llm_calls": 3,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null
+      }
+    ]
+  },
+  {
+    "condition": "syntax",
+    "rules": 3,
+    "SA": 1.0,
+    "DR": 1.0,
+    "FPR": 0.3333333333333333,
+    "SE": 0.8333333333333334,
+    "SS": 0.9333333333333332,
+    "llm_calls": 7,
+    "repairs": 0,
+    "failures": 0,
+    "outcomes": [
+      {
+        "scenario": "port_scan",
+        "condition": "syntax",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 60, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null
+      },
+      {
+        "scenario": "ssh_bruteforce",
+        "condition": "syntax",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Connection Flood from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 10, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": true,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.8,
+        "error": null
+      },
+      {
+        "scenario": "dir_bruteforce",
+        "condition": "syntax",
+        "produced": true,
+        "rule_text": "alert http $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Scanner User-Agent gobuster\"; flow:to_server; http.user_agent; content:\"gobuster\"; nocase; classtype:web-application-attack; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "web-attack",
+        "llm_calls": 3,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null
+      }
+    ]
+  },
+  {
+    "condition": "syntax_attack",
+    "rules": 3,
+    "SA": 1.0,
+    "DR": 1.0,
+    "FPR": 0.0,
+    "SE": 1.0,
+    "SS": 0.9333333333333332,
+    "llm_calls": 6,
+    "repairs": 0,
+    "failures": 0,
+    "outcomes": [
+      {
+        "scenario": "port_scan",
+        "condition": "syntax_attack",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 60, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null
+      },
+      {
+        "scenario": "ssh_bruteforce",
+        "condition": "syntax_attack",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET 2222 (msg:\"LOCAL Connection Flood from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 10, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.8,
+        "error": null
+      },
+      {
+        "scenario": "dir_bruteforce",
+        "condition": "syntax_attack",
+        "produced": true,
+        "rule_text": "alert http $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Scanner User-Agent gobuster\"; flow:to_server; http.user_agent; content:\"gobuster\"; nocase; classtype:web-application-attack; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "web-attack",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null
+      }
+    ]
+  },
+  {
+    "condition": "full",
+    "rules": 2,
+    "SA": 1.0,
+    "DR": 0.6666666666666666,
+    "FPR": 0.0,
+    "SE": 0.8333333333333333,
+    "SS": 1.0,
+    "llm_calls": 9,
+    "repairs": 3,
+    "failures": 1,
+    "outcomes": [
+      {
+        "scenario": "port_scan",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 60, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null
+      },
+      {
+        "scenario": "ssh_bruteforce",
+        "condition": "full",
+        "produced": false,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Connection Flood from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 20, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": false,
+        "triggers_attack": false,
+        "false_positive": false,
+        "role_group": null,
+        "llm_calls": 5,
+        "repairs": {
+          "false_positive": 1,
+          "no_trigger": 2
+        },
+        "semantic_similarity": null,
+        "error": "신규 생성 경로에서 K=3회 수리 후에도 검증 실패: alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Connection Flood from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 2"
+      },
+      {
+        "scenario": "dir_bruteforce",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert http $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Scanner User-Agent gobuster\"; flow:to_server; http.user_agent; content:\"gobuster\"; nocase; classtype:web-application-attack; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "web-attack",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null
+      }
+    ]
+  }
+]

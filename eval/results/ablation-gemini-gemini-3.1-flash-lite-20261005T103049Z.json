@@ -1,0 +1,91 @@
+[
+  {
+    "condition": "none",
+    "rules": 2,
+    "SA": 1.0,
+    "DR": 0.5,
+    "FPR": 0.5,
+    "SE": 0.5,
+    "SS": 0.7333333333333334,
+    "llm_calls": 4,
+    "repairs": 0,
+    "failures": 0,
+    "outcomes": [
+      {
+        "scenario": "port_scan",
+        "condition": "none",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"ET SCAN Potential Port Scan Detected\"; detection_filter:track by_src, count 60, seconds 300; classtype:network-scan; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": true,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.8,
+        "error": null
+      },
+      {
+        "scenario": "dir_bruteforce",
+        "condition": "none",
+        "produced": true,
+        "rule_text": "alert http $EXTERNAL_NET any -> $HOME_NET any (msg:\"ET WEB_SPECIFIC_APPS Gobuster Directory Brute Force User-Agent\"; flow:established,to_server; http.user_agent; content:\"gobuster/3.8.2\"; threshold:type threshold, track by_src, count 30, seconds 300; classtype:web-application-attack; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": false,
+        "false_positive": false,
+        "role_group": "web-attack",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.6666666666666666,
+        "error": null
+      }
+    ]
+  },
+  {
+    "condition": "full",
+    "rules": 2,
+    "SA": 1.0,
+    "DR": 1.0,
+    "FPR": 0.0,
+    "SE": 1.0,
+    "SS": 0.7333333333333334,
+    "llm_calls": 7,
+    "repairs": 3,
+    "failures": 0,
+    "outcomes": [
+      {
+        "scenario": "port_scan",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"ET SCAN Potential Port Scan Detected\"; flags:S,12; detection_filter:track by_src, count 60, seconds 300; classtype:network-scan; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "scanning",
+        "llm_calls": 3,
+        "repairs": {
+          "false_positive": 1
+        },
+        "semantic_similarity": 0.8,
+        "error": null
+      },
+      {
+        "scenario": "dir_bruteforce",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert http $EXTERNAL_NET any -> $HOME_NET any (msg:\"ET WEB_SPECIFIC_APPS Gobuster Directory Brute Force Attempt\"; flow:established,to_server; http.user_agent; content:\"gobuster/3.8.2\"; threshold:type threshold, track by_src, count 1, seconds 300; classtype:web-application-attack; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "web-attack",
+        "llm_calls": 4,
+        "repairs": {
+          "no_trigger": 1,
+          "role_group": 1
+        },
+        "semantic_similarity": 0.6666666666666666,
+        "error": null
+      }
+    ]
+  }
+]

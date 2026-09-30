@@ -1,0 +1,147 @@
+[
+  {
+    "condition": "none",
+    "rules": 4,
+    "SA": 1.0,
+    "DR": 0.75,
+    "FPR": 0.25,
+    "SE": 0.75,
+    "SS": 0.8583333333333334,
+    "llm_calls": 9,
+    "repairs": 0,
+    "failures": 0,
+    "truncated": false,
+    "outcomes": [
+      {
+        "scenario": "port_scan",
+        "condition": "none",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"ET SCAN Potential TCP Port Scan\"; flags:S; threshold:type threshold, track by_src, count 60, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": true,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.8,
+        "error": null
+      },
+      {
+        "scenario": "ssh_bruteforce",
+        "condition": "none",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET 2222 (msg:\"Potential SSH Brute Force / Scanning Attempt\"; flow:to_server; flags:S; threshold: type threshold, track by_src, count 10, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.8,
+        "error": null
+      },
+      {
+        "scenario": "dir_bruteforce",
+        "condition": "none",
+        "produced": true,
+        "rule_text": "alert http $EXTERNAL_NET any -> $HOME_NET any (msg:\"SCAN Gobuster Directory Brute Force Tool Detected\"; flow:to_server,established; http.user_agent; content:\"gobuster\"; nocase; threshold:type both, track by_src, count 30, seconds 300; classtype:web-application-attack; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": false,
+        "false_positive": false,
+        "role_group": "web-attack",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.8333333333333334,
+        "error": null
+      },
+      {
+        "scenario": "dns_query_burst",
+        "condition": "none",
+        "produced": true,
+        "rule_text": "alert udp $EXTERNAL_NET any -> $HOME_NET 53 (msg:\"ET DOS Inbound DNS Query Flood (flood-test.example)\"; dns.query; content:\"flood-test.example\"; nocase; threshold:type threshold, track by_src, count 100, seconds 60; classtype:denial-of-service; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "dns-flood",
+        "llm_calls": 3,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null
+      }
+    ]
+  },
+  {
+    "condition": "full",
+    "rules": 4,
+    "SA": 1.0,
+    "DR": 1.0,
+    "FPR": 0.0,
+    "SE": 1.0,
+    "SS": 0.8583333333333334,
+    "llm_calls": 10,
+    "repairs": 2,
+    "failures": 0,
+    "truncated": false,
+    "outcomes": [
+      {
+        "scenario": "port_scan",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"SCAN TCP SYN Port Scan Detected\"; flags:S; threshold: type both, track by_src, count 141, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.8,
+        "error": null
+      },
+      {
+        "scenario": "ssh_bruteforce",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET 2222 (msg:\"Potential SSH Brute Force Inbound\"; flow:to_server; flags:S; threshold: type both, track by_src, count 10, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.8,
+        "error": null
+      },
+      {
+        "scenario": "dir_bruteforce",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert http $EXTERNAL_NET any -> $HOME_NET any (msg:\"SCAN Gobuster Web Directory Brute Force Tool Detected\"; flow:established,to_server; http.user_agent; content:\"gobuster\"; nocase; threshold:type threshold, track by_src, count 5, seconds 300; classtype:web-application-attack; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "web-attack",
+        "llm_calls": 4,
+        "repairs": {
+          "no_trigger": 1,
+          "role_group": 1
+        },
+        "semantic_similarity": 0.8333333333333334,
+        "error": null
+      },
+      {
+        "scenario": "dns_query_burst",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert udp $EXTERNAL_NET any -> $HOME_NET 53 (msg:\"DOS High Volume Inbound DNS Query Flood\"; threshold: type both, track by_src, count 100, seconds 60; classtype:denial-of-service; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "dns-flood",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null
+      }
+    ]
+  }
+]

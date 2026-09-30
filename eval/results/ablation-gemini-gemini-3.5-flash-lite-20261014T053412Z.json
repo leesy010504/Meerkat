@@ -1,0 +1,98 @@
+[
+  {
+    "condition": "full",
+    "rules": 2,
+    "SA": 1.0,
+    "DR": 1.0,
+    "FPR": 0.0,
+    "SE": 1.0,
+    "SS": 0.5666666666666667,
+    "llm_calls": 8,
+    "repairs": 4,
+    "failures": 0,
+    "infra_errors": 0,
+    "truncated": false,
+    "outcomes": [
+      {
+        "scenario": "ua_spoofed_dirbust",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET 18080 (msg: \"ET WEB_SPECIFIC_APPS Directory Brute Force Attempt\"; flow: established, to_server; http.method; content: \"GET\"; threshold: type threshold, track by_src, count 270, seconds 60; classtype: web-application-attack; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "web-attack",
+        "llm_calls": 4,
+        "repairs": {
+          "syntax": 1,
+          "no_trigger": 1
+        },
+        "semantic_similarity": 0.3333333333333333,
+        "error": null,
+        "attempts": [
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": false,
+            "failure_kind": "syntax",
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET 18080 (msg: \"ET WEB_SPECIFIC_APPS Directory Brute Force Attempt\", flow: established, to_server, http.method; http.uri; content:\"GET\"; content: \"/admin\"; fast_pattern; threshold: type threshold, track by_src, count 270, seconds 60; classtype: web-application-attack; sid:1000000; rev:1;)"
+          },
+          {
+            "phase": "generate",
+            "attempt": 1,
+            "passed": false,
+            "failure_kind": "no_trigger",
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET 18080 (msg: \"ET WEB_SPECIFIC_APPS Directory Brute Force Attempt\"; flow: established, to_server; http.uri; content:\"GET\"; content: \"/admin\"; fast_pattern; threshold: type threshold, track by_src, count 270, seconds 60; classtype: web-application-attack; sid:1000000; rev:1;)"
+          },
+          {
+            "phase": "generate",
+            "attempt": 2,
+            "passed": true,
+            "failure_kind": null,
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET 18080 (msg: \"ET WEB_SPECIFIC_APPS Directory Brute Force Attempt\"; flow: established, to_server; http.method; content: \"GET\"; threshold: type threshold, track by_src, count 270, seconds 60; classtype: web-application-attack; sid:1000000; rev:1;)"
+          }
+        ]
+      },
+      {
+        "scenario": "slow_port_scan",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"Potential Port Scan Detected\"; flow:stateless; flags:S; detection_filter:track by_src, count 150, seconds 300; classtype:network-scan; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "scanning",
+        "llm_calls": 4,
+        "repairs": {
+          "no_trigger": 1,
+          "false_positive": 1
+        },
+        "semantic_similarity": 0.8,
+        "error": null,
+        "attempts": [
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": false,
+            "failure_kind": "no_trigger",
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"Potential Port Scan Detected\"; flow:stateless; detection_filter:track by_src, count 210, seconds 60; classtype:network-scan; sid:1000000; rev:1;)"
+          },
+          {
+            "phase": "generate",
+            "attempt": 1,
+            "passed": false,
+            "failure_kind": "false_positive",
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"Potential Port Scan Detected\"; flow:stateless; detection_filter:track by_src, count 100, seconds 300; classtype:network-scan; sid:1000000; rev:1;)"
+          },
+          {
+            "phase": "generate",
+            "attempt": 2,
+            "passed": true,
+            "failure_kind": null,
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"Potential Port Scan Detected\"; flow:stateless; flags:S; detection_filter:track by_src, count 150, seconds 300; classtype:network-scan; sid:1000000; rev:1;)"
+          }
+        ]
+      }
+    ]
+  }
+]

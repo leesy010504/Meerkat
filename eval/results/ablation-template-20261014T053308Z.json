@@ -1,0 +1,87 @@
+[
+  {
+    "condition": "full",
+    "rules": 1,
+    "SA": 1.0,
+    "DR": 0.5,
+    "FPR": 0.0,
+    "SE": 0.75,
+    "SS": 0.5,
+    "llm_calls": 7,
+    "repairs": 3,
+    "failures": 1,
+    "infra_errors": 0,
+    "truncated": false,
+    "outcomes": [
+      {
+        "scenario": "ua_spoofed_dirbust",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert http $EXTERNAL_NET any -> $HOME_NET 18080 (msg:\"LOCAL Directory Enumeration from Single Source\"; flow:to_server; http.method; content:\"GET\"; threshold:type threshold, track by_src, count 270, seconds 60; classtype:web-application-attack; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "web-attack",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.5,
+        "error": null,
+        "attempts": [
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": true,
+            "failure_kind": null,
+            "rule": "alert http $EXTERNAL_NET any -> $HOME_NET 18080 (msg:\"LOCAL Directory Enumeration from Single Source\"; flow:to_server; http.method; content:\"GET\"; threshold:type threshold, track by_src, count 270, seconds 60; classtype:web-application-attack; sid:1000000; rev:1;)"
+          }
+        ]
+      },
+      {
+        "scenario": "slow_port_scan",
+        "condition": "full",
+        "produced": false,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 210, seconds 60; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": false,
+        "triggers_attack": false,
+        "false_positive": false,
+        "role_group": null,
+        "llm_calls": 5,
+        "repairs": {
+          "no_trigger": 3
+        },
+        "semantic_similarity": null,
+        "error": "신규 생성 경로에서 K=3회 수리 후에도 검증 실패: alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_sr",
+        "attempts": [
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": false,
+            "failure_kind": "no_trigger",
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 210, seconds 60; classtype:attempted-recon; sid:1000000; rev:1;)"
+          },
+          {
+            "phase": "generate",
+            "attempt": 1,
+            "passed": false,
+            "failure_kind": "no_trigger",
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 210, seconds 60; classtype:attempted-recon; sid:1000000; rev:1;)"
+          },
+          {
+            "phase": "generate",
+            "attempt": 2,
+            "passed": false,
+            "failure_kind": "no_trigger",
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 210, seconds 60; classtype:attempted-recon; sid:1000000; rev:1;)"
+          },
+          {
+            "phase": "generate",
+            "attempt": 3,
+            "passed": false,
+            "failure_kind": "no_trigger",
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 210, seconds 60; classtype:attempted-recon; sid:1000000; rev:1;)"
+          }
+        ]
+      }
+    ]
+  }
+]

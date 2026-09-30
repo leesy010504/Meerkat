@@ -1,0 +1,48 @@
+[
+  {
+    "condition": "full",
+    "rules": 1,
+    "SA": 1.0,
+    "DR": 1.0,
+    "FPR": 0.0,
+    "SE": 1.0,
+    "SS": 0.8,
+    "llm_calls": 2,
+    "repairs": 0,
+    "failures": 0,
+    "infra_errors": 0,
+    "truncated": false,
+    "outcomes": [
+      {
+        "scenario": "slow_port_scan",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"ET SCAN Potential Port Scan Detected\"; detection_filter:track by_src, count 438, seconds 300; classtype:network-scan; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.8,
+        "error": null,
+        "attempts": [
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": false,
+            "failure_kind": "no_trigger",
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"ET SCAN Potential Port Scan Detected\"; detection_filter:track by_src, count 210, seconds 60; classtype:network-scan; sid:1000000; rev:1;)"
+          },
+          {
+            "phase": "generate",
+            "attempt": 1,
+            "passed": true,
+            "failure_kind": null,
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"ET SCAN Potential Port Scan Detected\"; detection_filter:track by_src, count 438, seconds 300; classtype:network-scan; sid:1000000; rev:1;)"
+          }
+        ]
+      }
+    ]
+  }
+]

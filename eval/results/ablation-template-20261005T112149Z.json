@@ -1,0 +1,114 @@
+[
+  {
+    "condition": "none",
+    "rules": 1,
+    "SA": 1.0,
+    "DR": 1.0,
+    "FPR": 0.0,
+    "SE": 1.0,
+    "SS": 1.0,
+    "llm_calls": 2,
+    "repairs": 0,
+    "failures": 0,
+    "outcomes": [
+      {
+        "scenario": "dns_query_burst",
+        "condition": "none",
+        "produced": true,
+        "rule_text": "alert udp $EXTERNAL_NET any -> $HOME_NET 53 (msg:\"LOCAL DNS Query Flood from Single Source\"; threshold:type threshold, track by_src, count 100, seconds 60; classtype:denial-of-service; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "dns-flood",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null
+      }
+    ]
+  },
+  {
+    "condition": "syntax",
+    "rules": 1,
+    "SA": 1.0,
+    "DR": 1.0,
+    "FPR": 0.0,
+    "SE": 1.0,
+    "SS": 1.0,
+    "llm_calls": 2,
+    "repairs": 0,
+    "failures": 0,
+    "outcomes": [
+      {
+        "scenario": "dns_query_burst",
+        "condition": "syntax",
+        "produced": true,
+        "rule_text": "alert udp $EXTERNAL_NET any -> $HOME_NET 53 (msg:\"LOCAL DNS Query Flood from Single Source\"; threshold:type threshold, track by_src, count 100, seconds 60; classtype:denial-of-service; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "dns-flood",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null
+      }
+    ]
+  },
+  {
+    "condition": "syntax_attack",
+    "rules": 1,
+    "SA": 1.0,
+    "DR": 1.0,
+    "FPR": 0.0,
+    "SE": 1.0,
+    "SS": 1.0,
+    "llm_calls": 2,
+    "repairs": 0,
+    "failures": 0,
+    "outcomes": [
+      {
+        "scenario": "dns_query_burst",
+        "condition": "syntax_attack",
+        "produced": true,
+        "rule_text": "alert udp $EXTERNAL_NET any -> $HOME_NET 53 (msg:\"LOCAL DNS Query Flood from Single Source\"; threshold:type threshold, track by_src, count 100, seconds 60; classtype:denial-of-service; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "dns-flood",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null
+      }
+    ]
+  },
+  {
+    "condition": "full",
+    "rules": 1,
+    "SA": 1.0,
+    "DR": 1.0,
+    "FPR": 0.0,
+    "SE": 1.0,
+    "SS": 1.0,
+    "llm_calls": 2,
+    "repairs": 0,
+    "failures": 0,
+    "outcomes": [
+      {
+        "scenario": "dns_query_burst",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert udp $EXTERNAL_NET any -> $HOME_NET 53 (msg:\"LOCAL DNS Query Flood from Single Source\"; threshold:type threshold, track by_src, count 100, seconds 60; classtype:denial-of-service; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "dns-flood",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null
+      }
+    ]
+  }
+]

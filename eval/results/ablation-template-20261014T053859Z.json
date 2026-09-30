@@ -1,0 +1,338 @@
+[
+  {
+    "condition": "none",
+    "rules": 6,
+    "SA": 1.0,
+    "DR": 0.8333333333333334,
+    "FPR": 0.16666666666666666,
+    "SE": 0.8333333333333334,
+    "SS": 0.85,
+    "llm_calls": 13,
+    "repairs": 0,
+    "failures": 0,
+    "infra_errors": 0,
+    "truncated": false,
+    "outcomes": [
+      {
+        "scenario": "port_scan",
+        "condition": "none",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 60, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": true,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null,
+        "attempts": [
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": true,
+            "failure_kind": null,
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 60, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)"
+          }
+        ]
+      },
+      {
+        "scenario": "ssh_bruteforce",
+        "condition": "none",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET 2222 (msg:\"LOCAL Connection Flood from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 10, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.8,
+        "error": null,
+        "attempts": [
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": true,
+            "failure_kind": null,
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET 2222 (msg:\"LOCAL Connection Flood from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 10, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)"
+          }
+        ]
+      },
+      {
+        "scenario": "dir_bruteforce",
+        "condition": "none",
+        "produced": true,
+        "rule_text": "alert http $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Scanner User-Agent gobuster\"; flow:to_server; http.user_agent; content:\"gobuster\"; nocase; classtype:web-application-attack; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "web-attack",
+        "llm_calls": 3,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null,
+        "attempts": [
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": true,
+            "failure_kind": null,
+            "rule": "alert http $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Scanner User-Agent gobuster\"; flow:to_server; http.user_agent; content:\"gobuster\"; nocase; classtype:web-application-attack; sid:1000000; rev:1;)"
+          },
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": true,
+            "failure_kind": null,
+            "rule": "alert http $EXTERNAL_NET any -> $HOME_NET 8080 (msg:\"LOCAL Directory Enumeration from Single Source\"; flow:to_server; http.method; content:\"GET\"; threshold:type threshold, track by_src, count 30, seconds 300; classtype:web-application-attack; sid:1000000; rev:1;)"
+          }
+        ]
+      },
+      {
+        "scenario": "dns_query_burst",
+        "condition": "none",
+        "produced": true,
+        "rule_text": "alert udp $EXTERNAL_NET any -> $HOME_NET 53 (msg:\"LOCAL DNS Query Flood from Single Source\"; threshold:type threshold, track by_src, count 100, seconds 60; classtype:denial-of-service; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "dns-flood",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null,
+        "attempts": [
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": true,
+            "failure_kind": null,
+            "rule": "alert udp $EXTERNAL_NET any -> $HOME_NET 53 (msg:\"LOCAL DNS Query Flood from Single Source\"; threshold:type threshold, track by_src, count 100, seconds 60; classtype:denial-of-service; sid:1000000; rev:1;)"
+          }
+        ]
+      },
+      {
+        "scenario": "ua_spoofed_dirbust",
+        "condition": "none",
+        "produced": true,
+        "rule_text": "alert http $EXTERNAL_NET any -> $HOME_NET 18080 (msg:\"LOCAL Directory Enumeration from Single Source\"; flow:to_server; http.method; content:\"GET\"; threshold:type threshold, track by_src, count 270, seconds 60; classtype:web-application-attack; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "web-attack",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.5,
+        "error": null,
+        "attempts": [
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": true,
+            "failure_kind": null,
+            "rule": "alert http $EXTERNAL_NET any -> $HOME_NET 18080 (msg:\"LOCAL Directory Enumeration from Single Source\"; flow:to_server; http.method; content:\"GET\"; threshold:type threshold, track by_src, count 270, seconds 60; classtype:web-application-attack; sid:1000000; rev:1;)"
+          }
+        ]
+      },
+      {
+        "scenario": "slow_port_scan",
+        "condition": "none",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 210, seconds 60; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": false,
+        "false_positive": false,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.8,
+        "error": null,
+        "attempts": [
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": true,
+            "failure_kind": null,
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 210, seconds 60; classtype:attempted-recon; sid:1000000; rev:1;)"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "condition": "full",
+    "rules": 6,
+    "SA": 1.0,
+    "DR": 1.0,
+    "FPR": 0.0,
+    "SE": 1.0,
+    "SS": 0.85,
+    "llm_calls": 12,
+    "repairs": 0,
+    "failures": 0,
+    "infra_errors": 0,
+    "truncated": false,
+    "outcomes": [
+      {
+        "scenario": "port_scan",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 141, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null,
+        "attempts": [
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": false,
+            "failure_kind": "false_positive",
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 60, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)"
+          },
+          {
+            "phase": "generate",
+            "attempt": 1,
+            "passed": true,
+            "failure_kind": null,
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 141, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)"
+          }
+        ]
+      },
+      {
+        "scenario": "ssh_bruteforce",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET 2222 (msg:\"LOCAL Connection Flood from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 10, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.8,
+        "error": null,
+        "attempts": [
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": true,
+            "failure_kind": null,
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET 2222 (msg:\"LOCAL Connection Flood from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 10, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)"
+          }
+        ]
+      },
+      {
+        "scenario": "dir_bruteforce",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert http $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Scanner User-Agent gobuster\"; flow:to_server; http.user_agent; content:\"gobuster\"; nocase; classtype:web-application-attack; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "web-attack",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null,
+        "attempts": [
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": true,
+            "failure_kind": null,
+            "rule": "alert http $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Scanner User-Agent gobuster\"; flow:to_server; http.user_agent; content:\"gobuster\"; nocase; classtype:web-application-attack; sid:1000000; rev:1;)"
+          },
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": false,
+            "failure_kind": "no_trigger",
+            "rule": "alert http $EXTERNAL_NET any -> $HOME_NET 8080 (msg:\"LOCAL Directory Enumeration from Single Source\"; flow:to_server; http.method; content:\"GET\"; threshold:type threshold, track by_src, count 30, seconds 300; classtype:web-application-attack; sid:1000000; rev:1;)"
+          }
+        ]
+      },
+      {
+        "scenario": "dns_query_burst",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert udp $EXTERNAL_NET any -> $HOME_NET 53 (msg:\"LOCAL DNS Query Flood from Single Source\"; threshold:type threshold, track by_src, count 100, seconds 60; classtype:denial-of-service; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "dns-flood",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 1.0,
+        "error": null,
+        "attempts": [
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": true,
+            "failure_kind": null,
+            "rule": "alert udp $EXTERNAL_NET any -> $HOME_NET 53 (msg:\"LOCAL DNS Query Flood from Single Source\"; threshold:type threshold, track by_src, count 100, seconds 60; classtype:denial-of-service; sid:1000000; rev:1;)"
+          }
+        ]
+      },
+      {
+        "scenario": "ua_spoofed_dirbust",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert http $EXTERNAL_NET any -> $HOME_NET 18080 (msg:\"LOCAL Directory Enumeration from Single Source\"; flow:to_server; http.method; content:\"GET\"; threshold:type threshold, track by_src, count 270, seconds 60; classtype:web-application-attack; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "web-attack",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.5,
+        "error": null,
+        "attempts": [
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": true,
+            "failure_kind": null,
+            "rule": "alert http $EXTERNAL_NET any -> $HOME_NET 18080 (msg:\"LOCAL Directory Enumeration from Single Source\"; flow:to_server; http.method; content:\"GET\"; threshold:type threshold, track by_src, count 270, seconds 60; classtype:web-application-attack; sid:1000000; rev:1;)"
+          }
+        ]
+      },
+      {
+        "scenario": "slow_port_scan",
+        "condition": "full",
+        "produced": true,
+        "rule_text": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 220, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)",
+        "syntax_ok": true,
+        "triggers_attack": true,
+        "false_positive": false,
+        "role_group": "scanning",
+        "llm_calls": 2,
+        "repairs": {},
+        "semantic_similarity": 0.8,
+        "error": null,
+        "attempts": [
+          {
+            "phase": "generate",
+            "attempt": 0,
+            "passed": false,
+            "failure_kind": "no_trigger",
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 210, seconds 60; classtype:attempted-recon; sid:1000000; rev:1;)"
+          },
+          {
+            "phase": "generate",
+            "attempt": 1,
+            "passed": true,
+            "failure_kind": null,
+            "rule": "alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:\"LOCAL Port Scan - Multiple Ports from Single Source\"; flow:to_server; flags:S,12; threshold:type threshold, track by_src, count 220, seconds 300; classtype:attempted-recon; sid:1000000; rev:1;)"
+          }
+        ]
+      }
+    ]
+  }
+]
